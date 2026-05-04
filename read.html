@@ -37,6 +37,7 @@
     border: 1px solid var(--border); border-radius: 4px;
     cursor: pointer; font: inherit; font-size: 13px; }
   header button:hover, header .file-label:hover { filter: brightness(1.15); }
+  header .icon-btn { width: 32px; padding: 5px 0; text-align: center; font-size: 16px; line-height: 1; }
   header input[type=file] { display: none; }
   header .spacer { flex: 1; }
   header .status { font-size: 12px; color: var(--dim); cursor: pointer;
@@ -272,7 +273,13 @@
     padding: 5px 10px; border-radius: 6px;
     font: inherit; font-size: 12px; cursor: pointer; }
   .lib-item .actions button:hover { color: var(--fg); border-color: var(--fg); }
-  .lib-empty { padding: 80px 20px; text-align: center; color: var(--dim); font-size: 15px; line-height: 1.5; }
+  .lib-empty { padding: 80px 20px; text-align: center; color: var(--dim); font-size: 15px; line-height: 1.6; }
+  .lib-empty-add { display: inline-block; margin: 18px 0 12px;
+    padding: 12px 28px; background: var(--accent); color: #111;
+    border: 1px solid var(--accent); border-radius: 10px;
+    font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .lib-empty-add:hover { filter: brightness(1.05); }
+  .lib-empty-hint { font-size: 13px; opacity: 0.8; }
 
   /* WPM toast */
   .wpm-toast { position: fixed; top: 50%; left: 50%;
@@ -293,7 +300,8 @@
 </head>
 <body>
 <header>
-  <button id="libBtn" class="file-label">library</button>
+  <button id="libBtn" class="file-label icon-btn" title="library">☰</button>
+  <button id="uploadBtn" class="file-label icon-btn" title="open file">+</button>
   <input type="file" id="file" accept=".md,.markdown,.txt,.pdf,text/markdown,text/plain,application/pdf" multiple>
   <div class="modes" id="modes">
     <button data-mode="word" class="active">word</button>
@@ -992,7 +1000,11 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
   async function renderLibrary() {
     let items = []; try { items = await libList(); } catch {}
     if (!items.length) {
-      libListEl.innerHTML = '<div class="lib-empty">no files yet — drag a .md onto the window or click “+ add files”</div>';
+      libListEl.innerHTML = `<div class="lib-empty">
+        <div>no files yet</div>
+        <button class="lib-empty-add" data-add>+ add files</button>
+        <div class="lib-empty-hint">or drag .md / .txt / .pdf onto this window</div>
+      </div>`;
       return;
     }
     items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
@@ -1097,7 +1109,9 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
   $('libBtn').addEventListener('click', openLibrary);
   $('closeLib').addEventListener('click', closeLibrary);
   $('addFiles').addEventListener('click', () => els.file.click());
+  $('uploadBtn').addEventListener('click', () => els.file.click());
   libListEl.addEventListener('click', async e => {
+    if (e.target.closest('[data-add]')) { els.file.click(); return; }
     const del = e.target.closest('[data-del]');
     if (del) { e.stopPropagation();
       if (confirm('delete this file?')) { await libRemove(+del.dataset.del); renderLibrary(); }
@@ -1197,8 +1211,11 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
         items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
         loadEntry(items[0]);
       } else {
-        const f = new File([SAMPLE_TEXT], SAMPLE_NAME, { type: 'text/markdown' });
-        await importFile(f, true);
+        // first run: show the sample without writing it to the library
+        S.libId = null;
+        S.rawMd = SAMPLE_TEXT;
+        S.fileName = SAMPLE_NAME;
+        buildForMode();
       }
     } catch {}
   })();

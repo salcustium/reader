@@ -54,6 +54,7 @@
     border: 1px solid var(--border); border-radius: 8px;
     font-size: 13px;
   }
+  header .icon-btn { width: 38px; padding: 0; text-align: center; font-size: 18px; line-height: 1; }
   header .gear-btn {
     width: 38px; height: 38px; padding: 0;
     background: var(--panel); color: var(--fg);
@@ -260,7 +261,14 @@
     padding: 6px 10px; border-radius: 6px;
     font: inherit; font-size: 12px; touch-action: manipulation; }
   .lib-empty { padding: 80px 20px; text-align: center; color: var(--dim);
-    font-size: 15px; line-height: 1.5; }
+    font-size: 15px; line-height: 1.6; }
+  .lib-empty-add { display: inline-block; margin: 18px 0 12px;
+    padding: 14px 32px; min-height: 48px;
+    background: var(--accent); color: #111;
+    border: 1px solid var(--accent); border-radius: 12px;
+    font: inherit; font-weight: 600; font-size: 15px;
+    cursor: pointer; touch-action: manipulation; }
+  .lib-empty-hint { font-size: 13px; opacity: 0.8; }
 
   /* settings: side drawer + dim backdrop */
   .panel-backdrop { position: fixed; inset: 0;
@@ -354,7 +362,8 @@
 </head>
 <body>
 <header>
-  <button id="libBtn" class="file-label">library</button>
+  <button id="libBtn" class="file-label icon-btn" title="library">☰</button>
+  <button id="uploadBtn" class="file-label icon-btn" title="open file">+</button>
   <input type="file" id="file" accept=".md,.markdown,.txt,.pdf,text/markdown,text/plain,application/pdf" multiple>
   <div class="modes" id="modes">
     <button data-mode="word" class="active">word</button>
@@ -1099,7 +1108,11 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
     let items = [];
     try { items = await libList(); } catch {}
     if (!items.length) {
-      libListEl.innerHTML = '<div class="lib-empty">no files yet<br>tap “+ add files” to import .md files from your phone</div>';
+      libListEl.innerHTML = `<div class="lib-empty">
+        <div>no files yet</div>
+        <button class="lib-empty-add" data-add>+ add files</button>
+        <div class="lib-empty-hint">.md / .txt / .pdf from your phone</div>
+      </div>`;
       return;
     }
     items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
@@ -1192,7 +1205,9 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
   $('libBtn').addEventListener('click', openLibrary);
   $('closeLib').addEventListener('click', closeLibrary);
   $('addFiles').addEventListener('click', () => els.file.click());
+  $('uploadBtn').addEventListener('click', () => els.file.click());
   libListEl.addEventListener('click', async e => {
+    if (e.target.closest('[data-add]')) { els.file.click(); return; }
     const del = e.target.closest('[data-del]');
     if (del) { e.stopPropagation();
       if (confirm('delete this file?')) { await libRemove(+del.dataset.del); renderLibrary(); }
@@ -1339,7 +1354,7 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
 
   loadCfg(); applyCfg();
 
-  // auto-resume: most-recent file from the library, or load sample on first run
+  // auto-resume: most-recent file from the library, or show sample on first run
   (async () => {
     try {
       let items = []; try { items = await libList(); } catch {}
@@ -1347,8 +1362,11 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
         items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
         loadEntry(items[0]);
       } else {
-        const f = new File([SAMPLE_TEXT], SAMPLE_NAME, { type: 'text/markdown' });
-        await importFile(f, true);
+        // first run: show the sample without writing it to the library
+        S.libId = null;
+        S.rawMd = SAMPLE_TEXT;
+        S.fileName = SAMPLE_NAME;
+        buildForMode();
       }
     } catch {}
   })();
