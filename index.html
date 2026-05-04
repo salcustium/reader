@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reader</title>
+<style>
+  body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: #111; color: #eee; font-family: -apple-system, system-ui, sans-serif; gap: 24px; }
+  a { color: #6cb6ff; padding: 14px 22px; border: 1px solid #2a2a2a; border-radius: 8px; text-decoration: none; }
+  a:hover { background: #1a1a1a; }
+</style>
+<script>
+  // Auto-route: phones go to mobile, everything else to desktop
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 900);
+  location.replace(isMobile ? './mobile/' : './rsvp.html');
+</script>
+</head>
+<body>
+  <noscript>
+    <a href="./rsvp.html">desktop</a>
+    <a href="./mobile/">mobile</a>
+  </noscript>
+</body>
+</html>

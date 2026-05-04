@@ -2,123 +2,120 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <title>Reader</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reader">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg">
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <style>
   :root {
-    --bg: #111;
-    --fg: #eee;
-    --dim: #888;
-    --accent: #ff5252;
-    --panel: #1a1a1a;
-    --border: #2a2a2a;
-    --link: #6cb6ff;
+    --bg: #111; --fg: #eee; --dim: #888; --accent: #ff5252;
+    --panel: #1a1a1a; --border: #2a2a2a; --link: #6cb6ff;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
-  body { display: flex; flex-direction: column; height: 100vh; }
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; height: 100dvh; }
 
   header {
-    padding: 10px 14px; border-bottom: 1px solid var(--border);
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: calc(8px + var(--safe-top)) 12px 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   }
-  header label { font-size: 13px; color: var(--dim); }
-  header input[type=number] { width: 70px; padding: 4px 6px;
-    background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; }
+  header label { font-size: 12px; color: var(--dim); }
   header button, header .file-label {
-    padding: 5px 12px; background: var(--panel); color: var(--fg);
-    border: 1px solid var(--border); border-radius: 4px;
-    cursor: pointer; font: inherit; font-size: 13px;
+    padding: 7px 12px; background: var(--panel); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 6px;
+    font: inherit; font-size: 13px; cursor: pointer; touch-action: manipulation;
   }
-  header button:hover, header .file-label:hover { background: #222; }
   header input[type=file] { display: none; }
   header .spacer { flex: 1; }
-  header .status { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  header .status { font-size: 11px; color: var(--dim); flex-basis: 100%; font-variant-numeric: tabular-nums; }
 
-  .modes { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-  .modes button { border: none; border-radius: 0; border-right: 1px solid var(--border); padding: 5px 10px; }
+  .modes { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .modes button { border: none; border-radius: 0; border-right: 1px solid var(--border); padding: 7px 10px; font-size: 12px; }
   .modes button:last-child { border-right: none; }
   .modes button.active { background: var(--accent); color: #111; }
 
   .zoom { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--dim); }
   .zoom[hidden] { display: none; }
-  .zoom button { padding: 3px 9px; }
+  .zoom button { padding: 5px 10px; }
 
-  main { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  main.dropping::after {
-    content: "drop markdown file"; position: absolute; inset: 12px;
-    border: 2px dashed var(--dim); border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--dim); font-size: 18px; pointer-events: none;
-    background: rgba(0,0,0,0.4);
-  }
+  main { flex: 1; position: relative; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; touch-action: pan-y; }
 
   /* word mode */
-  .stage { position: relative; width: min(900px, 92vw); height: 70vh;
+  .stage { position: relative; width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center; }
   .stage[hidden] { display: none; }
-  .guides { position: absolute; left: 0; right: 0; height: 1px; background: var(--border); }
-  .guides.top { top: calc(50% - 48px); } .guides.bot { top: calc(50% + 48px); }
+  .guides { position: absolute; left: 8%; right: 8%; height: 1px; background: var(--border); }
+  .guides.top { top: calc(50% - 44px); } .guides.bot { top: calc(50% + 44px); }
   .ticks { position: absolute; left: 50%; transform: translateX(-50%); width: 1px; background: var(--border); }
-  .ticks.top { top: calc(50% - 48px); height: 8px; }
-  .ticks.bot { top: calc(50% + 40px); height: 8px; }
+  .ticks.top { top: calc(50% - 44px); height: 8px; }
+  .ticks.bot { top: calc(50% + 36px); height: 8px; }
   .word { font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: clamp(36px, 7vw, 64px); letter-spacing: 0.01em; white-space: pre;
+    font-size: clamp(34px, 11vw, 60px); white-space: pre;
     display: inline-flex; will-change: transform; }
   .word .pre, .word .post { color: var(--fg); }
   .word .orp { color: var(--accent); }
-  .word.idle { color: var(--dim); font-family: inherit; font-size: 18px; }
+  .word.idle { color: var(--dim); font-family: inherit; font-size: 16px; padding: 0 24px; text-align: center; }
 
   /* sentence mode */
-  .sentence-stage { width: min(900px, 92vw); text-align: center; }
+  .sentence-stage { width: 92vw; max-width: 720px; text-align: center; padding: 0 4vw; }
   .sentence-stage .sentence {
-    font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
-    font-size: clamp(22px, 3.4vw, 34px); line-height: 1.45; color: var(--fg); max-width: 100%;
+    font-size: clamp(20px, 5.5vw, 30px); line-height: 1.45; color: var(--fg);
   }
-  .sentence-stage .sentence.idle { color: var(--dim); font-size: 18px; }
+  .sentence-stage .sentence.idle { color: var(--dim); font-size: 16px; }
   .sentence-stage .sentence.heading,
   .sentence-stage .sentence.list-item,
   .sentence-stage .sentence.quote,
   .sentence-stage .sentence.code,
-  .sentence-stage .sentence.table { font-size: clamp(18px, 2.6vw, 24px); text-align: left; line-height: 1.5; }
+  .sentence-stage .sentence.table { font-size: clamp(16px, 4.4vw, 22px); text-align: left; line-height: 1.5; }
   .sentence-stage .sentence > * { margin: 0; }
   .sentence-stage .sentence h1, .sentence-stage .sentence h2, .sentence-stage .sentence h3,
   .sentence-stage .sentence h4, .sentence-stage .sentence h5, .sentence-stage .sentence h6 {
-    font-weight: 600; line-height: 1.25; color: var(--fg);
+    font-weight: 600; line-height: 1.25;
   }
-  .sentence-stage .sentence h1 { font-size: 1.6em; }
-  .sentence-stage .sentence h2 { font-size: 1.4em; }
-  .sentence-stage .sentence h3 { font-size: 1.2em; }
+  .sentence-stage .sentence h1 { font-size: 1.55em; }
+  .sentence-stage .sentence h2 { font-size: 1.35em; }
+  .sentence-stage .sentence h3 { font-size: 1.18em; }
   .sentence-stage .sentence strong { font-weight: 700; }
   .sentence-stage .sentence em { font-style: italic; }
   .sentence-stage .sentence code {
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-family: ui-monospace, Menlo, monospace;
     background: var(--panel); padding: 1px 6px; border-radius: 3px; font-size: 0.9em;
   }
   .sentence-stage .sentence pre {
-    background: var(--panel); padding: 12px 14px; border-radius: 6px;
+    background: var(--panel); padding: 10px 12px; border-radius: 6px;
     overflow: auto; border: 1px solid var(--border);
-    text-align: left; font-size: 0.85em; line-height: 1.5;
+    text-align: left; font-size: 0.82em; line-height: 1.5;
   }
   .sentence-stage .sentence pre code { background: none; padding: 0; }
   .sentence-stage .sentence blockquote {
-    border-left: 3px solid var(--accent); padding-left: 14px; color: var(--fg);
+    border-left: 3px solid var(--accent); padding-left: 12px; color: var(--fg); text-align: left;
   }
   .sentence-stage .sentence a { color: var(--link); }
   .sentence-stage .sentence mark { background: rgba(255,230,100,0.25); color: var(--fg); padding: 0 3px; border-radius: 2px; }
   .sentence-stage .sentence del { color: var(--dim); }
   .sentence-stage .sentence ul, .sentence-stage .sentence ol { padding-left: 1.4em; text-align: left; }
-  .sentence-stage .sentence table { border-collapse: collapse; margin: 0 auto; font-size: 0.85em; }
+  .sentence-stage .sentence table { border-collapse: collapse; margin: 0 auto; font-size: 0.82em;
+    overflow-x: auto; display: block; }
   .sentence-stage .sentence th, .sentence-stage .sentence td {
-    border: 1px solid var(--border); padding: 6px 10px; text-align: left;
+    border: 1px solid var(--border); padding: 5px 8px; text-align: left;
   }
   .sentence-stage .sentence th { background: var(--panel); font-weight: 600; }
   .sentence-stage .sentence .bullet { color: var(--accent); margin-right: 6px; }
   .sentence-stage .sentence .wikilink { color: var(--link); border-bottom: 1px dotted var(--link); }
   .sentence-stage .sentence .embed { color: var(--dim); font-style: italic; }
-  .sentence-stage .meta { font-size: 12px; color: var(--dim); margin-top: 18px; }
+  .sentence-stage .meta { font-size: 11px; color: var(--dim); margin-top: 14px; }
 
   .progress { position: absolute; left: 0; bottom: 0; height: 2px;
     background: var(--accent); width: 0; transition: width 80ms linear; }
@@ -128,26 +125,25 @@
     color: var(--fg); margin: 1.4em 0 0.5em; line-height: 1.25;
     break-after: avoid; break-inside: avoid;
   }
-  .doc h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
-  .doc h2 { font-size: 1.45em; }
+  .doc h1 { font-size: 1.7em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  .doc h2 { font-size: 1.4em; }
   .doc h3 { font-size: 1.2em; }
   .doc h4 { font-size: 1.05em; color: var(--dim); }
   .doc p { margin: 0.7em 0; }
   .doc ul, .doc ol { padding-left: 1.4em; margin: 0.5em 0; }
   .doc li { margin: 0.25em 0; }
-  .doc code { font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  .doc code { font-family: ui-monospace, Menlo, monospace;
     background: var(--panel); padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
-  .doc pre { background: var(--panel); padding: 12px 14px; border-radius: 6px;
+  .doc pre { background: var(--panel); padding: 10px 12px; border-radius: 6px;
     overflow: auto; border: 1px solid var(--border); break-inside: avoid; }
   .doc pre code { background: none; padding: 0; }
   .doc a { color: var(--link); text-decoration: none; }
-  .doc a:hover { text-decoration: underline; }
   .doc blockquote { border-left: 3px solid var(--border); padding-left: 12px;
     margin: 0.7em 0; color: var(--dim); break-inside: avoid; }
   .doc hr { border: none; border-top: 1px solid var(--border); margin: 1.4em 0; }
   .doc table { border-collapse: collapse; margin: 1em 0; width: 100%;
-    font-size: 0.95em; break-inside: avoid; }
-  .doc th, .doc td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+    font-size: 0.92em; break-inside: avoid; }
+  .doc th, .doc td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; vertical-align: top; }
   .doc th { background: var(--panel); font-weight: 600; }
   .doc tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
   .doc mark { background: rgba(255,230,100,0.25); color: var(--fg); padding: 0 3px; border-radius: 2px; }
@@ -157,37 +153,50 @@
 
   /* bionic mode */
   .bionic { position: absolute; inset: 0; overflow: auto;
-    padding: 28px clamp(20px, 6vw, 80px) 80px; }
+    padding: 18px 16px calc(80px + var(--safe-bot));
+    -webkit-overflow-scrolling: touch; }
   .bionic[hidden] { display: none; }
-  .bionic .doc { max-width: 760px; margin: 0 auto;
-    font-size: 18px; line-height: 1.7; color: #b8b8b8; font-weight: 300; }
+  .bionic .doc { max-width: 720px; margin: 0 auto;
+    font-size: 17px; line-height: 1.7; color: #b8b8b8; font-weight: 300; }
   .bionic .doc b { font-weight: 700; color: var(--fg); }
-  .bionic .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 16px; }
+  .bionic .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 15px; }
 
-  /* page mode (Edge-style: paginated, side-by-side, zoom + scroll) */
-  .page-stage { position: absolute; inset: 0; --zoom: 1; background: #0e0e0e; overflow: hidden; }
+  /* page mode */
+  .page-stage { position: absolute; inset: 0; --zoom: 1; background: #0e0e0e; overflow: hidden;
+    touch-action: pan-x pinch-zoom; }
   .page-stage[hidden] { display: none; }
   .page-stage .scroll {
     height: 100%; overflow-x: auto; overflow-y: hidden;
-    padding: 28px clamp(20px, 4vw, 60px);
-    scroll-behavior: smooth;
+    padding: 18px clamp(14px, 4vw, 30px) calc(80px + var(--safe-bot));
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
   }
   .page-stage .doc {
     height: 100%;
-    column-width: calc(360px * var(--zoom));
-    column-gap: 80px;
+    column-width: calc(300px * var(--zoom));
+    column-gap: 50px;
     column-rule: 1px solid var(--border);
-    font-size: calc(16px * var(--zoom));
-    line-height: 1.65;
-    color: var(--fg);
+    font-size: calc(15px * var(--zoom));
+    line-height: 1.65; color: var(--fg);
   }
-  .page-stage .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 16px; }
+  .page-stage .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 15px; }
 
-  footer { padding: 8px 14px; border-top: 1px solid var(--border);
-    font-size: 11px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; }
-  kbd { font-family: ui-monospace, monospace; font-size: 10px;
-    background: var(--panel); border: 1px solid var(--border);
-    padding: 1px 5px; border-radius: 3px; }
+  /* bottom action bar */
+  .bar { padding: 8px 12px calc(8px + var(--safe-bot));
+    border-top: 1px solid var(--border); background: var(--bg);
+    display: flex; gap: 8px; align-items: center; }
+  .bar button { padding: 9px 0; flex: 1;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 8px; font: inherit; font-size: 14px; touch-action: manipulation; }
+  .bar button.primary { background: var(--accent); color: #111; border-color: var(--accent); flex: 1.4; font-weight: 600; }
+  .bar input[type=number] { width: 64px; padding: 8px 6px; text-align: center;
+    background: var(--panel); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 13px; }
+  .bar .label { font-size: 11px; color: var(--dim); margin-right: -4px; }
+  .bar.flash-only > .flash-only,
+  .bar:not(.flash-only) > .flash-only { display: var(--flash, flex); }
+
+  /* hints text on first-load */
+  .hint { font-size: 11px; color: var(--dim); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -201,73 +210,72 @@
     <button data-mode="bionic">bionic</button>
     <button data-mode="page">page</button>
   </div>
-  <button id="playBtn">play</button>
-  <button id="restartBtn">restart</button>
-  <label>wpm <input type="number" id="wpm" value="350" min="50" max="1200" step="10"></label>
-  <label><input type="checkbox" id="punctPause" checked> pauses</label>
   <span class="zoom" id="zoomCtrls" hidden>
     <button id="zoomOut">−</button>
     <span id="zoomLabel">100%</span>
     <button id="zoomIn">+</button>
   </span>
   <div class="spacer"></div>
-  <div class="status" id="status">no file loaded</div>
+  <div class="status" id="status">no file loaded · tap to play, swipe to seek</div>
 </header>
 
 <main id="main">
   <div class="stage" id="stageWord">
     <div class="guides top"></div><div class="guides bot"></div>
     <div class="ticks top"></div><div class="ticks bot"></div>
-    <div class="word idle" id="word">drop a .md file here, or use "open .md"</div>
+    <div class="word idle" id="word">tap "open .md" to load a file</div>
     <div class="progress" id="progressW"></div>
   </div>
   <div class="stage sentence-stage" id="stageSentence" hidden>
-    <div class="sentence idle" id="sentence">drop a .md file here, or use "open .md"</div>
+    <div class="sentence idle" id="sentence">tap "open .md" to load a file</div>
     <div class="meta" id="sentenceMeta"></div>
     <div class="progress" id="progressS"></div>
   </div>
   <div class="bionic" id="stageBionic" hidden>
-    <div class="empty" id="bionicEmpty">drop a .md file here, or use "open .md"</div>
+    <div class="empty" id="bionicEmpty">tap "open .md" to load a file</div>
     <div class="doc" id="bionicDoc"></div>
   </div>
   <div class="page-stage" id="stagePage" hidden>
-    <div class="empty" id="pageEmpty">drop a .md file here, or use "open .md"</div>
+    <div class="empty" id="pageEmpty">tap "open .md" to load a file</div>
     <div class="scroll" id="pageScroll"><div class="doc" id="pageDoc"></div></div>
   </div>
 </main>
 
-<footer>
-  <span><kbd>space</kbd> play/pause</span>
-  <span><kbd>←</kbd> / <kbd>→</kbd> back/forward</span>
-  <span><kbd>shift</kbd>+arrows jump 20</span>
-  <span><kbd>↑</kbd> / <kbd>↓</kbd> wpm ±25</span>
-  <span><kbd>r</kbd> restart · <kbd>0</kbd> start</span>
-  <span><kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>/<kbd>4</kbd> mode</span>
-  <span><kbd>−</kbd>/<kbd>=</kbd> zoom (page)</span>
-</footer>
+<div class="bar" id="bar">
+  <button id="prevBtn" class="flash-only">‹</button>
+  <button id="playBtn" class="primary flash-only">play</button>
+  <button id="nextBtn" class="flash-only">›</button>
+  <span class="label flash-only">wpm</span>
+  <input type="number" id="wpm" value="350" min="50" max="1200" step="25" class="flash-only">
+  <button id="restartBtn" class="flash-only">↻</button>
+</div>
 
 <script>
+// ---- service worker ----
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
 (() => {
   const $ = id => document.getElementById(id);
   const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const countWords = s => (s || '').split(/\s+/).filter(Boolean).length;
 
-  // ---- DOM refs ----
   const els = {
     word: $('word'), sentence: $('sentence'), sentenceMeta: $('sentenceMeta'),
     bionicDoc: $('bionicDoc'), bionicEmpty: $('bionicEmpty'),
     pageDoc: $('pageDoc'), pageEmpty: $('pageEmpty'), pageScroll: $('pageScroll'), pageStage: $('stagePage'),
     stageWord: $('stageWord'), stageSentence: $('stageSentence'), stageBionic: $('stageBionic'),
-    status: $('status'), wpm: $('wpm'), playBtn: $('playBtn'), restartBtn: $('restartBtn'),
-    punctPause: $('punctPause'), progressW: $('progressW'), progressS: $('progressS'),
-    main: $('main'), file: $('file'), modes: $('modes'),
+    status: $('status'), wpm: $('wpm'), playBtn: $('playBtn'),
+    prevBtn: $('prevBtn'), nextBtn: $('nextBtn'), restartBtn: $('restartBtn'),
+    main: $('main'), file: $('file'), modes: $('modes'), bar: $('bar'),
     zoomCtrls: $('zoomCtrls'), zoomLabel: $('zoomLabel'), zoomOut: $('zoomOut'), zoomIn: $('zoomIn'),
   };
-
-  // ---- state ----
   const S = { rawMd: '', fileName: '', mode: 'word', units: [], idx: 0, playing: false, timer: null, zoom: 1 };
 
-  // ---- markdown rendering (single source of truth: marked + obsidian preprocess) ----
+  // ---- markdown ----
   function preprocessObsidian(md) {
     md = md.replace(/!\[\[([^\]]+?)\]\]/g, (_, c) => {
       const [name, alt] = c.split('|');
@@ -282,12 +290,9 @@
   }
   const renderHTML = md => marked.parse(preprocessObsidian(md));
 
-  // ---- mode-specific unit builders ----
   function tokenizeWords(md) {
-    // strip block markers and split into words; long words get hyphenated
     const text = md
-      .replace(/```[\s\S]*?```/g, ' ')
-      .replace(/`[^`]*`/g, ' ')
+      .replace(/```[\s\S]*?```/g, ' ').replace(/`[^`]*`/g, ' ')
       .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
       .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
       .replace(/^[ \t]*#{1,6}[ \t]*/gm, '')
@@ -309,7 +314,7 @@
   }
 
   function buildSentenceUnits(md) {
-    if (typeof marked === 'undefined') return []; // CDN failed
+    if (typeof marked === 'undefined') return [];
     const tokens = marked.lexer(preprocessObsidian(md));
     const cards = [];
     const splitInto = text => text.split(/(?<=[.!?])\s+(?=[A-Z(\["'])/).map(p => p.trim()).filter(Boolean);
@@ -340,11 +345,9 @@
             break;
           }
           case 'code':
-            cards.push({ html: marked.parser([t]), words: Math.max(8, countWords(t.text)), type: 'code' });
-            break;
+            cards.push({ html: marked.parser([t]), words: Math.max(8, countWords(t.text)), type: 'code' }); break;
           case 'blockquote':
-            cards.push({ html: marked.parser([t]), words: Math.max(3, countWords(t.text || '')), type: 'quote' });
-            break;
+            cards.push({ html: marked.parser([t]), words: Math.max(3, countWords(t.text || '')), type: 'quote' }); break;
           case 'hr': case 'space': break;
           default:
             if (t.text) cards.push({ html: marked.parseInline(t.text), words: countWords(t.text), type: 'sentence' });
@@ -355,7 +358,7 @@
     return cards;
   }
 
-  // ---- ORP for word mode ----
+  // ---- ORP ----
   const pivotIndex = w => {
     const n = w.length;
     if (n <= 1) return 0; if (n <= 5) return 1; if (n <= 9) return 2; if (n <= 13) return 3; return 4;
@@ -369,8 +372,7 @@
       `<span class="orp">${esc(w.slice(p, p + 1))}</span>` +
       `<span class="post">${esc(w.slice(p + 1))}</span>`;
     requestAnimationFrame(() => {
-      const orpEl = els.word.querySelector('.orp');
-      if (!orpEl) return;
+      const orpEl = els.word.querySelector('.orp'); if (!orpEl) return;
       const wb = els.word.getBoundingClientRect();
       const ob = orpEl.getBoundingClientRect();
       els.word.style.transform = `translateX(${(wb.left + wb.width / 2) - (ob.left + ob.width / 2)}px)`;
@@ -385,7 +387,7 @@
       `${u.words} words${u.type && u.type !== 'sentence' ? ' · ' + u.type : ''}`;
   }
 
-  // ---- bionic post-process: bold first ~40% of each word, skip code/pre ----
+  // ---- bionic ----
   function bionicify(root) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(n) {
@@ -420,12 +422,10 @@
     let d = 60000 / getWpm();
     if (w.length > 8)  d *= 1.15;
     if (w.length > 11) d *= 1.15;
-    if (els.punctPause.checked) {
-      const last = w[w.length - 1];
-      if (',;:'.includes(last)) d *= 1.6;
-      else if ('.!?'.includes(last)) d *= 2.2;
-      else if (')]}"'.includes(last)) d *= 1.4;
-    }
+    const last = w[w.length - 1];
+    if (',;:'.includes(last)) d *= 1.6;
+    else if ('.!?'.includes(last)) d *= 2.2;
+    else if (')]}"'.includes(last)) d *= 1.4;
     return d;
   }
   function delayForSentence(u) {
@@ -436,6 +436,18 @@
     return d;
   }
 
+  // ---- wake lock ----
+  let wakeLock = null;
+  async function acquireWakeLock() {
+    if ('wakeLock' in navigator) {
+      try { wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+    }
+  }
+  function releaseWakeLock() { if (wakeLock) { wakeLock.release(); wakeLock = null; } }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && S.playing) acquireWakeLock();
+  });
+
   // ---- playback ----
   const isFlash = () => S.mode === 'word' || S.mode === 'sentence';
   function step() {
@@ -444,7 +456,7 @@
     if (S.mode === 'word') renderWord(u); else renderSentence(u);
     updateStatus();
     const d = S.mode === 'word' ? delayForWord(u) : delayForSentence(u);
-    const bar = S.mode === 'word' ? els.progressW : els.progressS;
+    const bar = S.mode === 'word' ? $('progressW') : $('progressS');
     bar.style.transition = `width ${d}ms linear`;
     bar.style.width = `${((S.idx + 1) / S.units.length) * 100}%`;
     S.idx++;
@@ -453,10 +465,10 @@
   function play() {
     if (!isFlash() || !S.units.length) return;
     if (S.idx >= S.units.length) S.idx = 0;
-    S.playing = true; els.playBtn.textContent = 'pause'; step();
+    S.playing = true; els.playBtn.textContent = 'pause'; acquireWakeLock(); step();
   }
   function pause() {
-    S.playing = false; els.playBtn.textContent = 'play';
+    S.playing = false; els.playBtn.textContent = 'play'; releaseWakeLock();
     if (S.timer) { clearTimeout(S.timer); S.timer = null; }
   }
   const toggle = () => S.playing ? pause() : play();
@@ -466,24 +478,24 @@
     S.idx = Math.max(0, Math.min(S.units.length, S.idx + delta));
     const shown = S.units[Math.max(0, S.idx - 1)];
     if (S.mode === 'word') renderWord(shown || ''); else renderSentence(shown);
-    const bar = S.mode === 'word' ? els.progressW : els.progressS;
+    const bar = S.mode === 'word' ? $('progressW') : $('progressS');
     bar.style.transition = 'none';
     bar.style.width = `${(S.idx / Math.max(1, S.units.length)) * 100}%`;
     updateStatus();
   }
 
   function updateStatus() {
-    if (!S.rawMd) { els.status.textContent = 'no file loaded'; return; }
+    if (!S.rawMd) { els.status.textContent = 'no file loaded · tap to play, swipe to seek'; return; }
     if (!isFlash()) { els.status.textContent = `${S.fileName} · ${S.mode}`; return; }
     const wpm = getWpm();
     const wordsLeft = S.mode === 'word'
       ? Math.max(0, S.units.length - S.idx)
       : S.units.slice(S.idx).reduce((a, u) => a + (u.words || 0), 0);
     els.status.textContent =
-      `${S.idx}/${S.units.length} ${S.mode === 'word' ? 'words' : 'sentences'} · ${Math.round(wordsLeft / wpm)}m left @ ${wpm} wpm`;
+      `${S.fileName} · ${S.idx}/${S.units.length} · ${Math.round(wordsLeft / wpm)}m left @ ${wpm} wpm`;
   }
 
-  // ---- mode switching + build ----
+  // ---- mode + build ----
   function setMode(m) {
     if (m === S.mode) return;
     pause();
@@ -495,26 +507,26 @@
     els.stageBionic.hidden = m !== 'bionic';
     els.pageStage.hidden = m !== 'page';
     els.zoomCtrls.hidden = m !== 'page';
-    if (S.rawMd) buildForMode();
-    else updateStatus();
+    // bottom bar visibility for playback controls
+    els.bar.style.setProperty('--flash', isFlash() ? 'flex' : 'none');
+    if (S.rawMd) buildForMode(); else updateStatus();
   }
 
   function buildForMode() {
     S.idx = 0;
     if (S.mode === 'word') {
       S.units = tokenizeWords(S.rawMd);
-      els.progressW.style.transition = 'none'; els.progressW.style.width = '0%';
+      $('progressW').style.transition = 'none'; $('progressW').style.width = '0%';
       renderWord(S.units[0] || '');
     } else if (S.mode === 'sentence') {
       S.units = buildSentenceUnits(S.rawMd);
-      els.progressS.style.transition = 'none'; els.progressS.style.width = '0%';
+      $('progressS').style.transition = 'none'; $('progressS').style.width = '0%';
       renderSentence(S.units[0]);
     } else if (S.mode === 'bionic') {
       S.units = [];
       els.bionicDoc.innerHTML = renderHTML(S.rawMd);
       bionicify(els.bionicDoc);
       els.bionicEmpty.style.display = els.bionicDoc.textContent.trim() ? 'none' : '';
-      els.stageBionic.scrollTop = 0;
     } else if (S.mode === 'page') {
       S.units = [];
       els.pageDoc.innerHTML = renderHTML(S.rawMd);
@@ -525,38 +537,21 @@
     updateStatus();
   }
 
-  // ---- zoom (page mode) ----
   function applyZoom() {
     els.pageStage.style.setProperty('--zoom', S.zoom);
     els.zoomLabel.textContent = `${Math.round(S.zoom * 100)}%`;
   }
   const setZoom = z => { S.zoom = Math.max(0.5, Math.min(3, +z.toFixed(2))); applyZoom(); };
 
-  // ---- file loading ----
   async function loadFile(file) {
-    S.rawMd = await file.text();
-    S.fileName = file.name;
-    buildForMode();
+    S.rawMd = await file.text(); S.fileName = file.name; buildForMode();
   }
 
   // ---- listeners ----
   els.file.addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); });
-
-  ['dragenter','dragover'].forEach(ev => window.addEventListener(ev, e => {
-    if (!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
-    e.preventDefault(); els.main.classList.add('dropping');
-  }));
-  ['dragleave','drop'].forEach(ev => window.addEventListener(ev, e => {
-    e.preventDefault();
-    if (ev === 'dragleave' && e.relatedTarget) return;
-    els.main.classList.remove('dropping');
-  }));
-  window.addEventListener('drop', e => {
-    if (!e.dataTransfer.files.length) return;
-    e.preventDefault(); loadFile(e.dataTransfer.files[0]);
-  });
-
   els.playBtn.addEventListener('click', toggle);
+  els.prevBtn.addEventListener('click', () => jump(-1));
+  els.nextBtn.addEventListener('click', () => jump(1));
   els.restartBtn.addEventListener('click', () => { S.idx = 0; if (isFlash()) play(); });
   els.wpm.addEventListener('change', updateStatus);
   els.modes.addEventListener('click', e => {
@@ -564,38 +559,66 @@
   });
   els.zoomIn.addEventListener('click', () => setZoom(S.zoom + 0.1));
   els.zoomOut.addEventListener('click', () => setZoom(S.zoom - 0.1));
+
+  // ---- touch gestures on the flash stages ----
+  let touch = null;
+  function attachGestures(el) {
+    el.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) { touch = null; return; }
+      const t = e.touches[0];
+      touch = { x: t.clientX, y: t.clientY, t: Date.now(), moved: false };
+    }, { passive: true });
+    el.addEventListener('touchmove', e => {
+      if (!touch || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+      if (Math.hypot(dx, dy) > 12) touch.moved = true;
+    }, { passive: true });
+    el.addEventListener('touchend', e => {
+      if (!touch) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+      const dt = Date.now() - touch.t;
+      if (!touch.moved && dt < 350) { toggle(); }
+      else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+        jump(dx < 0 ? (e.changedTouches[0].clientX < window.innerWidth / 2 ? 1 : 1) : -1);
+      }
+      touch = null;
+    });
+  }
+  attachGestures(els.stageWord);
+  attachGestures(els.stageSentence);
+
+  // page mode: ctrl/meta + wheel to zoom; touch native scroll handles paging
   els.pageScroll.addEventListener('wheel', e => {
     if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(S.zoom + (e.deltaY < 0 ? 0.1 : -0.1)); return; }
     if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      els.pageScroll.scrollLeft += e.deltaY;
-      e.preventDefault();
+      els.pageScroll.scrollLeft += e.deltaY; e.preventDefault();
     }
   }, { passive: false });
 
+  // hardware keyboard support (works when bluetooth keyboard attached)
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
     switch (e.key) {
       case ' ': e.preventDefault(); toggle(); break;
       case 'ArrowLeft':
         if (S.mode === 'page') els.pageScroll.scrollBy({ left: -els.pageScroll.clientWidth * 0.5, behavior: 'smooth' });
-        else { e.preventDefault(); jump(e.shiftKey ? -20 : -1); }
-        break;
+        else { e.preventDefault(); jump(e.shiftKey ? -20 : -1); } break;
       case 'ArrowRight':
         if (S.mode === 'page') els.pageScroll.scrollBy({ left: els.pageScroll.clientWidth * 0.5, behavior: 'smooth' });
-        else { e.preventDefault(); jump(e.shiftKey ? 20 : 1); }
-        break;
-      case 'ArrowUp': e.preventDefault(); els.wpm.value = Math.min(1200, getWpm() + 25); updateStatus(); break;
-      case 'ArrowDown': e.preventDefault(); els.wpm.value = Math.max(50, getWpm() - 25); updateStatus(); break;
-      case 'r': case 'R': S.idx = 0; if (isFlash()) play(); break;
-      case '0': if (isFlash()) jump(-S.units.length); break;
+        else { e.preventDefault(); jump(e.shiftKey ? 20 : 1); } break;
+      case 'ArrowUp': els.wpm.value = Math.min(1200, getWpm() + 25); updateStatus(); break;
+      case 'ArrowDown': els.wpm.value = Math.max(50, getWpm() - 25); updateStatus(); break;
       case '1': setMode('word'); break;
       case '2': setMode('sentence'); break;
       case '3': setMode('bionic'); break;
       case '4': setMode('page'); break;
-      case '=': case '+': if (S.mode === 'page') setZoom(S.zoom + 0.1); break;
-      case '-': case '_': if (S.mode === 'page') setZoom(S.zoom - 0.1); break;
     }
   });
+
+  // initialize bar visibility
+  els.bar.style.setProperty('--flash', 'flex');
 })();
 </script>
 </body>
