@@ -355,7 +355,7 @@
 <body>
 <header>
   <button id="libBtn" class="file-label">library</button>
-  <input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple>
+  <input type="file" id="file" accept=".md,.markdown,.txt,.pdf,text/markdown,text/plain,application/pdf" multiple>
   <div class="modes" id="modes">
     <button data-mode="word" class="active">word</button>
     <button data-mode="sentence">sentence</button>
@@ -519,6 +519,61 @@ if ('serviceWorker' in navigator) {
   const S = { rawMd: '', fileName: '', mode: 'word', units: [], idx: 0,
     playing: false, timer: null, zoom: 1,
     contexts: [], contextOf: [], posInContext: [] };
+
+  // ---- sample file ----
+  const SAMPLE_NAME = 'The Appointment in Samarra (sample).md';
+  const SAMPLE_TEXT = `# The Appointment in Samarra
+
+A short fable, retold from the Babylonian Talmud (Sukkah 53a).
+
+## The Story
+
+A merchant in Baghdad sent his servant to the market to buy provisions. After a while the servant returned, white-faced and trembling, and said:
+
+> "Master, just now in the marketplace I was jostled by a woman in the crowd. When I turned to look, I saw it was **Death** who had jostled me. She stared at me and made a threatening gesture. Lend me your horse, and I will ride away from this city and avoid my fate. I will go to *Samarra*, and there Death will not find me."
+
+The merchant lent him his horse, and the servant mounted it, dug his spurs into its flanks, and rode away as fast as he could.
+
+Later the merchant himself went down to the marketplace, and he saw Death standing in the crowd. He approached her and said:
+
+> "Why did you make a threatening gesture at my servant this morning when you saw him?"
+
+> "That was not a threatening gesture," Death replied. "It was only a start of surprise. I was astonished to see him in Baghdad — for I have an appointment with him tonight, in **Samarra**."
+
+---
+
+## Try the modes
+
+- **word** — flashes one word at a time. Tap to play, swipe ↔ to seek, swipe ↕ for wpm.
+- **sentence** — flashes whole sentences with full markdown rendering.
+- **bionic** — full document, first ~40% of each word bolded.
+- **page** — paginated columns (auto / 1–6), pinch to zoom.
+
+Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or \`.pdf\` to replace this sample.
+`;
+
+  // ---- PDF support ----
+  let _pdfjsPromise = null;
+  function loadPdfJs() {
+    if (_pdfjsPromise) return _pdfjsPromise;
+    _pdfjsPromise = import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs').then(pdfjs => {
+      pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
+      return pdfjs;
+    });
+    return _pdfjsPromise;
+  }
+  async function extractPdfText(file) {
+    const pdfjs = await loadPdfJs();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const parts = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      parts.push(content.items.map(it => it.str).join(' '));
+    }
+    return parts.join('\n\n').trim();
+  }
 
   // ---- config ----
   const cfg = {
@@ -1067,7 +1122,14 @@ if ('serviceWorker' in navigator) {
   const closeLibrary = () => { libraryEl.hidden = true; };
 
   async function importFile(file, makeActive) {
-    const text = await file.text();
+    const lower = file.name.toLowerCase();
+    let text;
+    if (lower.endsWith('.pdf') || file.type === 'application/pdf') {
+      try { text = await extractPdfText(file); }
+      catch (e) { alert('failed to read pdf: ' + (e.message || e)); return; }
+    } else {
+      text = await file.text();
+    }
     let items = []; try { items = await libList(); } catch {}
     const existing = items.find(f => f.name === file.name);
     let id;
@@ -1277,13 +1339,17 @@ if ('serviceWorker' in navigator) {
 
   loadCfg(); applyCfg();
 
-  // auto-resume: if there's a most-recent file in the library, load it silently
+  // auto-resume: most-recent file from the library, or load sample on first run
   (async () => {
     try {
-      const items = await libList();
-      if (!items.length) return;
-      items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
-      loadEntry(items[0]);
+      let items = []; try { items = await libList(); } catch {}
+      if (items.length) {
+        items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
+        loadEntry(items[0]);
+      } else {
+        const f = new File([SAMPLE_TEXT], SAMPLE_NAME, { type: 'text/markdown' });
+        await importFile(f, true);
+      }
     } catch {}
   })();
 })();

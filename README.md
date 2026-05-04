@@ -30,6 +30,17 @@ Live: **https://salcustium.github.io/reader/**
 - **Status cycle**: tap the status text to cycle progress / percent / time-left / words-left.
 - **Resume position**: each file remembers your last position, mode, and total length.
 
+## File formats
+
+The reader natively reads **`.md` / `.markdown` / `.txt` / `.pdf`** files. PDFs are parsed with [pdf.js](https://mozilla.github.io/pdf.js/) (loaded on demand from CDN). For everything else, convert first — some free tools that work well:
+
+| Source | Tool |
+|---|---|
+| `.docx` → md | [Word2MD](https://word2md.com/), [word2md.net](https://www.word2md.net/), [DocToMD](https://doctomd.com/) |
+| `.epub` → md / txt | [Calibre](https://calibre-ebook.com/) (desktop), [Word.to EPUB→Markdown](https://word.to/epub-markdown/) |
+| `.pdf` → md (richer than built-in) | [PDF2MD](https://pdf2md.morethan.io/), [NoteGPT PDF→MD](https://notegpt.io/pdf-to-markdown-converter) |
+| anything → anything | [Pandoc](https://pandoc.org/) (CLI, free, offline), [Microsoft markitdown](https://github.com/microsoft/markitdown) |
+
 ## Markdown features
 
 CommonMark + GFM (tables, task lists, strikethrough) plus Obsidian-style highlights (`==text==`), wikilinks (`[[Page]]`), and embeds (`![[file]]`). Rendered via [marked](https://github.com/markedjs/marked).
