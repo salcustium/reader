@@ -19,26 +19,36 @@
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bot: env(safe-area-inset-bottom, 0px);
   }
+  :root[data-theme="light"] {
+    --bg: #fafafa; --fg: #1a1a1a; --dim: #666; --accent: #d63333;
+    --panel: #ffffff; --border: #d8d8d8; --link: #0066cc;
+  }
+  :root[data-theme="sepia"] {
+    --bg: #f4ecd8; --fg: #3d2f1f; --dim: #8a7556; --accent: #a3461c;
+    --panel: #ebe0c5; --border: #c8b896; --link: #8a4a1f;
+  }
+  :root[data-theme="night"] {
+    --bg: #1a0b0b; --fg: #c4a8a8; --dim: #806060; --accent: #e63946;
+    --panel: #261515; --border: #3a2020; --link: #d4886c;
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     overscroll-behavior: none; }
   body { display: flex; flex-direction: column; height: 100dvh; }
 
-  header {
-    padding: calc(8px + var(--safe-top)) 12px 8px;
+  header { padding: calc(8px + var(--safe-top)) 12px 8px;
     border-bottom: 1px solid var(--border);
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-  }
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   header label { font-size: 12px; color: var(--dim); }
   header button, header .file-label {
     padding: 7px 12px; background: var(--panel); color: var(--fg);
     border: 1px solid var(--border); border-radius: 6px;
-    font: inherit; font-size: 13px; cursor: pointer; touch-action: manipulation;
-  }
+    font: inherit; font-size: 13px; cursor: pointer; touch-action: manipulation; }
   header input[type=file] { display: none; }
   header .spacer { flex: 1; }
-  header .status { font-size: 11px; color: var(--dim); flex-basis: 100%; font-variant-numeric: tabular-nums; }
+  header .status { font-size: 11px; color: var(--dim); flex-basis: 100%;
+    font-variant-numeric: tabular-nums; cursor: pointer; user-select: none; }
 
   .modes { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
   .modes button { border: none; border-radius: 0; border-right: 1px solid var(--border); padding: 7px 10px; font-size: 12px; }
@@ -48,6 +58,29 @@
   .zoom { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--dim); }
   .zoom[hidden] { display: none; }
   .zoom button { padding: 5px 10px; }
+
+  /* settings panel: bottom sheet on mobile */
+  .panel { position: fixed; left: 8px; right: 8px;
+    bottom: calc(76px + var(--safe-bot));
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; z-index: 60;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+    max-height: 70vh; overflow-y: auto; }
+  .panel[hidden] { display: none; }
+  .panel h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase;
+    color: var(--dim); letter-spacing: 0.06em; font-weight: 600; }
+  .panel .row { display: flex; align-items: center; gap: 12px; margin: 10px 0; font-size: 14px; }
+  .panel .row label { flex: 1; color: var(--fg); }
+  .panel select, .panel input[type=number] {
+    background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 8px; font: inherit; font-size: 14px; min-width: 100px; }
+  .panel input[type=color] { width: 44px; height: 28px; padding: 1px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+  .panel input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); }
+  .panel hr { border: none; border-top: 1px solid var(--border); margin: 12px 0 8px; }
+  .panel .custom-only { display: none; }
+  .panel.show-custom .custom-only { display: flex; }
 
   main { flex: 1; position: relative; display: flex; align-items: center; justify-content: center;
     overflow: hidden; touch-action: pan-y; }
@@ -68,11 +101,18 @@
   .word .orp { color: var(--accent); }
   .word.idle { color: var(--dim); font-family: inherit; font-size: 16px; padding: 0 24px; text-align: center; }
 
+  .phantom { position: absolute; left: 50%; transform: translateX(-50%);
+    font-family: ui-monospace, Menlo, monospace; font-size: clamp(13px, 3.6vw, 18px);
+    color: var(--dim); opacity: 0; pointer-events: none; white-space: pre;
+    transition: opacity 0.18s; }
+  .phantom.prev { top: calc(50% - 80px); }
+  .phantom.next { top: calc(50% + 60px); }
+  .stage.phantom-on .phantom { opacity: 0.32; }
+
   /* sentence mode */
   .sentence-stage { width: 92vw; max-width: 720px; text-align: center; padding: 0 4vw; }
   .sentence-stage .sentence {
-    font-size: clamp(20px, 5.5vw, 30px); line-height: 1.45; color: var(--fg);
-  }
+    font-size: clamp(20px, 5.5vw, 30px); line-height: 1.45; color: var(--fg); }
   .sentence-stage .sentence.idle { color: var(--dim); font-size: 16px; }
   .sentence-stage .sentence.heading,
   .sentence-stage .sentence.list-item,
@@ -82,26 +122,20 @@
   .sentence-stage .sentence > * { margin: 0; }
   .sentence-stage .sentence h1, .sentence-stage .sentence h2, .sentence-stage .sentence h3,
   .sentence-stage .sentence h4, .sentence-stage .sentence h5, .sentence-stage .sentence h6 {
-    font-weight: 600; line-height: 1.25;
-  }
+    font-weight: 600; line-height: 1.25; }
   .sentence-stage .sentence h1 { font-size: 1.55em; }
   .sentence-stage .sentence h2 { font-size: 1.35em; }
   .sentence-stage .sentence h3 { font-size: 1.18em; }
   .sentence-stage .sentence strong { font-weight: 700; }
   .sentence-stage .sentence em { font-style: italic; }
-  .sentence-stage .sentence code {
-    font-family: ui-monospace, Menlo, monospace;
-    background: var(--panel); padding: 1px 6px; border-radius: 3px; font-size: 0.9em;
-  }
-  .sentence-stage .sentence pre {
-    background: var(--panel); padding: 10px 12px; border-radius: 6px;
+  .sentence-stage .sentence code { font-family: ui-monospace, Menlo, monospace;
+    background: var(--panel); padding: 1px 6px; border-radius: 3px; font-size: 0.9em; }
+  .sentence-stage .sentence pre { background: var(--panel); padding: 10px 12px; border-radius: 6px;
     overflow: auto; border: 1px solid var(--border);
-    text-align: left; font-size: 0.82em; line-height: 1.5;
-  }
+    text-align: left; font-size: 0.82em; line-height: 1.5; }
   .sentence-stage .sentence pre code { background: none; padding: 0; }
   .sentence-stage .sentence blockquote {
-    border-left: 3px solid var(--accent); padding-left: 12px; color: var(--fg); text-align: left;
-  }
+    border-left: 3px solid var(--accent); padding-left: 12px; color: var(--fg); text-align: left; }
   .sentence-stage .sentence a { color: var(--link); }
   .sentence-stage .sentence mark { background: rgba(255,230,100,0.25); color: var(--fg); padding: 0 3px; border-radius: 2px; }
   .sentence-stage .sentence del { color: var(--dim); }
@@ -109,8 +143,7 @@
   .sentence-stage .sentence table { border-collapse: collapse; margin: 0 auto; font-size: 0.82em;
     overflow-x: auto; display: block; }
   .sentence-stage .sentence th, .sentence-stage .sentence td {
-    border: 1px solid var(--border); padding: 5px 8px; text-align: left;
-  }
+    border: 1px solid var(--border); padding: 5px 8px; text-align: left; }
   .sentence-stage .sentence th { background: var(--panel); font-weight: 600; }
   .sentence-stage .sentence .bullet { color: var(--accent); margin-right: 6px; }
   .sentence-stage .sentence .wikilink { color: var(--link); border-bottom: 1px dotted var(--link); }
@@ -120,11 +153,10 @@
   .progress { position: absolute; left: 0; bottom: 0; height: 2px;
     background: var(--accent); width: 0; transition: width 80ms linear; }
 
-  /* shared doc rendering for bionic + page modes */
+  /* shared doc rendering */
   .doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 {
     color: var(--fg); margin: 1.4em 0 0.5em; line-height: 1.25;
-    break-after: avoid; break-inside: avoid;
-  }
+    break-after: avoid; break-inside: avoid; }
   .doc h1 { font-size: 1.7em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
   .doc h2 { font-size: 1.4em; }
   .doc h3 { font-size: 1.2em; }
@@ -145,58 +177,57 @@
     font-size: 0.92em; break-inside: avoid; }
   .doc th, .doc td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; vertical-align: top; }
   .doc th { background: var(--panel); font-weight: 600; }
-  .doc tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .doc tr:nth-child(even) td { background: rgba(127,127,127,0.05); }
   .doc mark { background: rgba(255,230,100,0.25); color: var(--fg); padding: 0 3px; border-radius: 2px; }
   .doc .wikilink { color: var(--link); border-bottom: 1px dotted var(--link); }
   .doc .embed { color: var(--dim); font-style: italic; }
   .doc del { color: var(--dim); }
 
-  /* bionic mode */
+  /* bionic */
   .bionic { position: absolute; inset: 0; overflow: auto;
     padding: 18px 16px calc(80px + var(--safe-bot));
     -webkit-overflow-scrolling: touch; }
   .bionic[hidden] { display: none; }
   .bionic .doc { max-width: 720px; margin: 0 auto;
-    font-size: 17px; line-height: 1.7; color: #b8b8b8; font-weight: 300; }
+    font-size: 17px; line-height: 1.7; color: var(--dim); font-weight: 300; }
   .bionic .doc b { font-weight: 700; color: var(--fg); }
   .bionic .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 15px; }
 
-  /* page mode */
-  .page-stage { position: absolute; inset: 0; --zoom: 1; background: #0e0e0e; overflow: hidden;
+  /* page */
+  .page-stage { position: absolute; inset: 0; --zoom: 1; background: var(--bg); overflow: hidden;
     touch-action: pan-x pinch-zoom; }
   .page-stage[hidden] { display: none; }
   .page-stage .scroll {
     height: 100%; overflow-x: auto; overflow-y: hidden;
     padding: 18px clamp(14px, 4vw, 30px) calc(80px + var(--safe-bot));
-    scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
-  }
+    scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
   .page-stage .doc {
-    height: 100%;
+    height: 100%; column-gap: 50px; column-rule: 1px solid var(--border);
     column-width: calc(300px * var(--zoom));
-    column-gap: 50px;
-    column-rule: 1px solid var(--border);
     font-size: calc(15px * var(--zoom));
-    line-height: 1.65; color: var(--fg);
-  }
+    line-height: 1.65; color: var(--fg); }
+  .page-stage .doc.cols-1 { column-count: 1; column-width: auto; }
+  .page-stage .doc.cols-2 { column-count: 2; column-width: auto; }
+  .page-stage .doc.cols-3 { column-count: 3; column-width: auto; }
+  .page-stage .doc.cols-4 { column-count: 4; column-width: auto; }
+  .page-stage .doc.cols-5 { column-count: 5; column-width: auto; }
+  .page-stage .doc.cols-6 { column-count: 6; column-width: auto; }
   .page-stage .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 15px; }
 
   /* bottom action bar */
   .bar { padding: 8px 12px calc(8px + var(--safe-bot));
     border-top: 1px solid var(--border); background: var(--bg);
-    display: flex; gap: 8px; align-items: center; }
+    display: flex; gap: 6px; align-items: center; }
   .bar button { padding: 9px 0; flex: 1;
     background: var(--panel); color: var(--fg); border: 1px solid var(--border);
     border-radius: 8px; font: inherit; font-size: 14px; touch-action: manipulation; }
   .bar button.primary { background: var(--accent); color: #111; border-color: var(--accent); flex: 1.4; font-weight: 600; }
-  .bar input[type=number] { width: 64px; padding: 8px 6px; text-align: center;
+  .bar button.icon { flex: 0 0 44px; font-size: 16px; }
+  .bar input[type=number] { width: 60px; padding: 8px 4px; text-align: center;
     background: var(--panel); color: var(--fg);
     border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 13px; }
-  .bar .label { font-size: 11px; color: var(--dim); margin-right: -4px; }
   .bar.flash-only > .flash-only,
   .bar:not(.flash-only) > .flash-only { display: var(--flash, flex); }
-
-  /* hints text on first-load */
-  .hint { font-size: 11px; color: var(--dim); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -219,11 +250,45 @@
   <div class="status" id="status">no file loaded · tap to play, swipe to seek</div>
 </header>
 
+<div class="panel" id="settingsPanel" hidden>
+  <h3>theme</h3>
+  <div class="row">
+    <label>theme</label>
+    <select id="setTheme">
+      <option value="dark">dark</option>
+      <option value="light">light</option>
+      <option value="sepia">sepia</option>
+      <option value="night">night</option>
+      <option value="custom">custom</option>
+    </select>
+  </div>
+  <div class="row custom-only"><label>background</label><input type="color" id="setBg" value="#111111"></div>
+  <div class="row custom-only"><label>foreground</label><input type="color" id="setFg" value="#eeeeee"></div>
+  <div class="row custom-only"><label>accent</label><input type="color" id="setAccent" value="#ff5252"></div>
+  <hr>
+  <h3>page mode</h3>
+  <div class="row">
+    <label>columns</label>
+    <select id="setCols">
+      <option value="auto">auto</option>
+      <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+      <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+    </select>
+  </div>
+  <hr>
+  <h3>reading</h3>
+  <div class="row"><label>hold to read</label><input type="checkbox" id="setHoldToRead"></div>
+  <div class="row"><label>phantom words</label><input type="checkbox" id="setPhantom"></div>
+  <div class="row"><label>pause on punctuation</label><input type="checkbox" id="setPunctPause" checked></div>
+</div>
+
 <main id="main">
   <div class="stage" id="stageWord">
     <div class="guides top"></div><div class="guides bot"></div>
     <div class="ticks top"></div><div class="ticks bot"></div>
+    <div class="phantom prev" id="phantomPrev"></div>
     <div class="word idle" id="word">tap "open .md" to load a file</div>
+    <div class="phantom next" id="phantomNext"></div>
     <div class="progress" id="progressW"></div>
   </div>
   <div class="stage sentence-stage" id="stageSentence" hidden>
@@ -242,20 +307,18 @@
 </main>
 
 <div class="bar" id="bar">
+  <button id="prevHeadingBtn" class="icon" title="prev heading">⌘‹</button>
   <button id="prevBtn" class="flash-only">‹</button>
   <button id="playBtn" class="primary flash-only">play</button>
   <button id="nextBtn" class="flash-only">›</button>
-  <span class="label flash-only">wpm</span>
+  <button id="nextHeadingBtn" class="icon" title="next heading">›⌘</button>
   <input type="number" id="wpm" value="350" min="50" max="1200" step="25" class="flash-only">
-  <button id="restartBtn" class="flash-only">↻</button>
+  <button id="settingsBtn" class="icon" title="settings">⚙</button>
 </div>
 
 <script>
-// ---- service worker ----
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  });
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 
 (() => {
@@ -265,25 +328,79 @@ if ('serviceWorker' in navigator) {
 
   const els = {
     word: $('word'), sentence: $('sentence'), sentenceMeta: $('sentenceMeta'),
+    phantomPrev: $('phantomPrev'), phantomNext: $('phantomNext'),
     bionicDoc: $('bionicDoc'), bionicEmpty: $('bionicEmpty'),
     pageDoc: $('pageDoc'), pageEmpty: $('pageEmpty'), pageScroll: $('pageScroll'), pageStage: $('stagePage'),
     stageWord: $('stageWord'), stageSentence: $('stageSentence'), stageBionic: $('stageBionic'),
     status: $('status'), wpm: $('wpm'), playBtn: $('playBtn'),
-    prevBtn: $('prevBtn'), nextBtn: $('nextBtn'), restartBtn: $('restartBtn'),
+    prevBtn: $('prevBtn'), nextBtn: $('nextBtn'),
+    prevHeadingBtn: $('prevHeadingBtn'), nextHeadingBtn: $('nextHeadingBtn'),
     main: $('main'), file: $('file'), modes: $('modes'), bar: $('bar'),
     zoomCtrls: $('zoomCtrls'), zoomLabel: $('zoomLabel'), zoomOut: $('zoomOut'), zoomIn: $('zoomIn'),
+    settingsBtn: $('settingsBtn'), settingsPanel: $('settingsPanel'),
+    setTheme: $('setTheme'), setBg: $('setBg'), setFg: $('setFg'), setAccent: $('setAccent'),
+    setCols: $('setCols'), setHoldToRead: $('setHoldToRead'),
+    setPhantom: $('setPhantom'), setPunctPause: $('setPunctPause'),
   };
-  const S = { rawMd: '', fileName: '', mode: 'word', units: [], idx: 0, playing: false, timer: null, zoom: 1 };
+  const S = { rawMd: '', fileName: '', mode: 'word', units: [], idx: 0,
+    playing: false, timer: null, zoom: 1 };
+
+  // ---- config ----
+  const cfg = {
+    theme: 'dark', bg: '#111111', fg: '#eeeeee', accent: '#ff5252',
+    cols: 'auto', holdToRead: false, phantom: false, punctPause: true, statusMode: 0,
+  };
+  function loadCfg() {
+    try { Object.assign(cfg, JSON.parse(localStorage.getItem('reader-cfg') || '{}')); } catch {}
+  }
+  function saveCfg() {
+    try { localStorage.setItem('reader-cfg', JSON.stringify(cfg)); } catch {}
+  }
+  function mix(a, b, f) {
+    const ah = parseInt(a.slice(1), 16), bh = parseInt(b.slice(1), 16);
+    const ar = (ah >> 16) & 255, ag = (ah >> 8) & 255, ab = ah & 255;
+    const br = (bh >> 16) & 255, bg = (bh >> 8) & 255, bb = bh & 255;
+    const r = Math.round(ar + (br - ar) * f);
+    const g = Math.round(ag + (bg - ag) * f);
+    const blu = Math.round(ab + (bb - ab) * f);
+    return '#' + ((r << 16) | (g << 8) | blu).toString(16).padStart(6, '0');
+  }
+  function applyCfg() {
+    const html = document.documentElement;
+    html.dataset.theme = cfg.theme;
+    if (cfg.theme === 'custom') {
+      html.style.setProperty('--bg', cfg.bg);
+      html.style.setProperty('--fg', cfg.fg);
+      html.style.setProperty('--accent', cfg.accent);
+      html.style.setProperty('--panel', mix(cfg.bg, cfg.fg, 0.06));
+      html.style.setProperty('--border', mix(cfg.bg, cfg.fg, 0.18));
+      html.style.setProperty('--dim', mix(cfg.bg, cfg.fg, 0.5));
+    } else {
+      ['--bg','--fg','--accent','--panel','--border','--dim'].forEach(p => html.style.removeProperty(p));
+    }
+    els.pageDoc.classList.remove('cols-1','cols-2','cols-3','cols-4','cols-5','cols-6');
+    if (cfg.cols !== 'auto') els.pageDoc.classList.add('cols-' + cfg.cols);
+    els.stageWord.classList.toggle('phantom-on', cfg.phantom);
+    if (!cfg.phantom) { els.phantomPrev.textContent = ''; els.phantomNext.textContent = ''; }
+    els.setTheme.value = cfg.theme;
+    els.setBg.value = cfg.bg; els.setFg.value = cfg.fg; els.setAccent.value = cfg.accent;
+    els.setCols.value = cfg.cols;
+    els.setHoldToRead.checked = cfg.holdToRead;
+    els.setPhantom.checked = cfg.phantom;
+    els.setPunctPause.checked = cfg.punctPause;
+    els.settingsPanel.classList.toggle('show-custom', cfg.theme === 'custom');
+    // theme-color meta for browser chrome
+    const tc = document.querySelector('meta[name=theme-color]');
+    if (tc) tc.setAttribute('content', getComputedStyle(html).getPropertyValue('--bg').trim());
+  }
 
   // ---- markdown ----
   function preprocessObsidian(md) {
     md = md.replace(/!\[\[([^\]]+?)\]\]/g, (_, c) => {
-      const [name, alt] = c.split('|');
-      return `<span class="embed">↪ ${alt || name}</span>`;
+      const [name, alt] = c.split('|'); return `<span class="embed">↪ ${alt || name}</span>`;
     });
     md = md.replace(/\[\[([^\]]+?)\]\]/g, (_, c) => {
-      const [name, alt] = c.split('|');
-      return `<span class="wikilink">${alt || name}</span>`;
+      const [name, alt] = c.split('|'); return `<span class="wikilink">${alt || name}</span>`;
     });
     md = md.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>');
     return md;
@@ -330,19 +447,16 @@ if ('serviceWorker' in navigator) {
             break;
           case 'list':
             for (let i = 0; i < t.items.length; i++) {
-              const item = t.items[i];
-              const txt = item.text || '';
+              const item = t.items[i]; const txt = item.text || '';
               const marker = t.ordered
                 ? `<span class="bullet">${(t.start || 1) + i}.</span> `
                 : `<span class="bullet">•</span> `;
               cards.push({ html: marker + marked.parseInline(txt), words: countWords(txt), type: 'list-item' });
-            }
-            break;
+            } break;
           case 'table': {
             const rowWords = (t.header || []).reduce((a, c) => a + countWords(c.text || ''), 0)
               + (t.rows || []).reduce((a, r) => a + r.reduce((b, c) => b + countWords(c.text || ''), 0), 0);
-            cards.push({ html: marked.parser([t]), words: Math.max(20, rowWords), type: 'table' });
-            break;
+            cards.push({ html: marked.parser([t]), words: Math.max(20, rowWords), type: 'table' }); break;
           }
           case 'code':
             cards.push({ html: marked.parser([t]), words: Math.max(8, countWords(t.text)), type: 'code' }); break;
@@ -358,7 +472,7 @@ if ('serviceWorker' in navigator) {
     return cards;
   }
 
-  // ---- ORP ----
+  // ---- ORP + render ----
   const pivotIndex = w => {
     const n = w.length;
     if (n <= 1) return 0; if (n <= 5) return 1; if (n <= 9) return 2; if (n <= 13) return 3; return 4;
@@ -373,10 +487,14 @@ if ('serviceWorker' in navigator) {
       `<span class="post">${esc(w.slice(p + 1))}</span>`;
     requestAnimationFrame(() => {
       const orpEl = els.word.querySelector('.orp'); if (!orpEl) return;
-      const wb = els.word.getBoundingClientRect();
-      const ob = orpEl.getBoundingClientRect();
+      const wb = els.word.getBoundingClientRect(), ob = orpEl.getBoundingClientRect();
       els.word.style.transform = `translateX(${(wb.left + wb.width / 2) - (ob.left + ob.width / 2)}px)`;
     });
+    if (cfg.phantom && S.mode === 'word') updatePhantom();
+  }
+  function updatePhantom() {
+    els.phantomPrev.textContent = S.units[S.idx - 1] || '';
+    els.phantomNext.textContent = S.units[S.idx + 1] || '';
   }
   function renderSentence(u) {
     if (!u) { els.sentence.className = 'sentence idle'; els.sentence.textContent = '';
@@ -387,7 +505,6 @@ if ('serviceWorker' in navigator) {
       `${u.words} words${u.type && u.type !== 'sentence' ? ' · ' + u.type : ''}`;
   }
 
-  // ---- bionic ----
   function bionicify(root) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(n) {
@@ -422,10 +539,12 @@ if ('serviceWorker' in navigator) {
     let d = 60000 / getWpm();
     if (w.length > 8)  d *= 1.15;
     if (w.length > 11) d *= 1.15;
-    const last = w[w.length - 1];
-    if (',;:'.includes(last)) d *= 1.6;
-    else if ('.!?'.includes(last)) d *= 2.2;
-    else if (')]}"'.includes(last)) d *= 1.4;
+    if (cfg.punctPause) {
+      const last = w[w.length - 1];
+      if (',;:'.includes(last)) d *= 1.6;
+      else if ('.!?'.includes(last)) d *= 2.2;
+      else if (')]}"'.includes(last)) d *= 1.4;
+    }
     return d;
   }
   function delayForSentence(u) {
@@ -484,22 +603,63 @@ if ('serviceWorker' in navigator) {
     updateStatus();
   }
 
+  function jumpHeading(dir) {
+    if (S.mode === 'sentence') {
+      const hs = []; for (let i = 0; i < S.units.length; i++) if (S.units[i].type === 'heading') hs.push(i);
+      if (!hs.length) return;
+      let target;
+      if (dir > 0) target = hs.find(i => i > S.idx);
+      else { for (let j = hs.length - 1; j >= 0; j--) if (hs[j] < S.idx - 1) { target = hs[j]; break; } }
+      if (target === undefined) return;
+      pause(); S.idx = target;
+      renderSentence(S.units[S.idx]);
+      $('progressS').style.transition = 'none';
+      $('progressS').style.width = `${(S.idx / Math.max(1, S.units.length)) * 100}%`;
+      updateStatus();
+    } else if (S.mode === 'bionic') {
+      const heads = els.bionicDoc.querySelectorAll('h1,h2,h3,h4,h5,h6');
+      const cur = els.stageBionic.scrollTop;
+      const arr = dir > 0 ? [...heads] : [...heads].reverse();
+      for (const h of arr) {
+        const top = h.offsetTop;
+        if (dir > 0 ? top > cur + 40 : top < cur - 40) {
+          els.stageBionic.scrollTo({ top: Math.max(0, top - 20), behavior: 'smooth' }); return;
+        }
+      }
+    } else if (S.mode === 'page') {
+      const heads = els.pageDoc.querySelectorAll('h1,h2,h3,h4,h5,h6');
+      const cur = els.pageScroll.scrollLeft;
+      const arr = dir > 0 ? [...heads] : [...heads].reverse();
+      for (const h of arr) {
+        const left = h.offsetLeft;
+        if (dir > 0 ? left > cur + 40 : left < cur - 40) {
+          els.pageScroll.scrollTo({ left: Math.max(0, left - 20), behavior: 'smooth' }); return;
+        }
+      }
+    }
+  }
+
   function updateStatus() {
     if (!S.rawMd) { els.status.textContent = 'no file loaded · tap to play, swipe to seek'; return; }
     if (!isFlash()) { els.status.textContent = `${S.fileName} · ${S.mode}`; return; }
-    const wpm = getWpm();
-    const wordsLeft = S.mode === 'word'
-      ? Math.max(0, S.units.length - S.idx)
-      : S.units.slice(S.idx).reduce((a, u) => a + (u.words || 0), 0);
-    els.status.textContent =
-      `${S.fileName} · ${S.idx}/${S.units.length} · ${Math.round(wordsLeft / wpm)}m left @ ${wpm} wpm`;
+    const wpm = getWpm(); const total = S.units.length; const done = S.idx;
+    const wordsLeft = S.mode === 'word' ? Math.max(0, total - done)
+      : S.units.slice(done).reduce((a, u) => a + (u.words || 0), 0);
+    const minsLeft = wordsLeft / wpm;
+    const pct = total ? (done / total) * 100 : 0;
+    let body;
+    switch (cfg.statusMode % 4) {
+      case 0: body = `${done}/${total} · ${Math.round(minsLeft)}m left`; break;
+      case 1: body = `${pct.toFixed(0)}% · ${Math.round(minsLeft)}m left`; break;
+      case 2: body = `${Math.round(minsLeft)}m left @ ${wpm} wpm`; break;
+      case 3: body = `${wordsLeft} words left`; break;
+    }
+    els.status.textContent = `${S.fileName} · ${body}`;
   }
 
-  // ---- mode + build ----
   function setMode(m) {
     if (m === S.mode) return;
-    pause();
-    S.mode = m;
+    pause(); S.mode = m;
     for (const b of els.modes.querySelectorAll('button'))
       b.classList.toggle('active', b.dataset.mode === m);
     els.stageWord.hidden = m !== 'word';
@@ -507,25 +667,23 @@ if ('serviceWorker' in navigator) {
     els.stageBionic.hidden = m !== 'bionic';
     els.pageStage.hidden = m !== 'page';
     els.zoomCtrls.hidden = m !== 'page';
-    // bottom bar visibility for playback controls
     els.bar.style.setProperty('--flash', isFlash() ? 'flex' : 'none');
     if (S.rawMd) buildForMode(); else updateStatus();
   }
-
   function buildForMode() {
     S.idx = 0;
     if (S.mode === 'word') {
       S.units = tokenizeWords(S.rawMd);
       $('progressW').style.transition = 'none'; $('progressW').style.width = '0%';
       renderWord(S.units[0] || '');
+      if (cfg.phantom) updatePhantom();
     } else if (S.mode === 'sentence') {
       S.units = buildSentenceUnits(S.rawMd);
       $('progressS').style.transition = 'none'; $('progressS').style.width = '0%';
       renderSentence(S.units[0]);
     } else if (S.mode === 'bionic') {
       S.units = [];
-      els.bionicDoc.innerHTML = renderHTML(S.rawMd);
-      bionicify(els.bionicDoc);
+      els.bionicDoc.innerHTML = renderHTML(S.rawMd); bionicify(els.bionicDoc);
       els.bionicEmpty.style.display = els.bionicDoc.textContent.trim() ? 'none' : '';
     } else if (S.mode === 'page') {
       S.units = [];
@@ -536,40 +694,56 @@ if ('serviceWorker' in navigator) {
     }
     updateStatus();
   }
-
   function applyZoom() {
     els.pageStage.style.setProperty('--zoom', S.zoom);
     els.zoomLabel.textContent = `${Math.round(S.zoom * 100)}%`;
   }
   const setZoom = z => { S.zoom = Math.max(0.5, Math.min(3, +z.toFixed(2))); applyZoom(); };
 
-  async function loadFile(file) {
-    S.rawMd = await file.text(); S.fileName = file.name; buildForMode();
-  }
+  async function loadFile(file) { S.rawMd = await file.text(); S.fileName = file.name; buildForMode(); }
 
   // ---- listeners ----
   els.file.addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); });
   els.playBtn.addEventListener('click', toggle);
   els.prevBtn.addEventListener('click', () => jump(-1));
   els.nextBtn.addEventListener('click', () => jump(1));
-  els.restartBtn.addEventListener('click', () => { S.idx = 0; if (isFlash()) play(); });
+  els.prevHeadingBtn.addEventListener('click', () => jumpHeading(-1));
+  els.nextHeadingBtn.addEventListener('click', () => jumpHeading(1));
   els.wpm.addEventListener('change', updateStatus);
   els.modes.addEventListener('click', e => {
     const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode);
   });
   els.zoomIn.addEventListener('click', () => setZoom(S.zoom + 0.1));
   els.zoomOut.addEventListener('click', () => setZoom(S.zoom - 0.1));
+  els.status.addEventListener('click', () => {
+    cfg.statusMode = (cfg.statusMode + 1) % 4; saveCfg(); updateStatus();
+  });
 
-  // ---- touch gestures on the flash stages ----
-  // tap = play/pause, horizontal drag = continuous scrub (fine near zero, accelerated when far)
+  // settings
+  function toggleSettings() { els.settingsPanel.hidden = !els.settingsPanel.hidden; }
+  els.settingsBtn.addEventListener('click', toggleSettings);
+  document.addEventListener('click', e => {
+    if (els.settingsPanel.hidden) return;
+    if (els.settingsPanel.contains(e.target) || e.target === els.settingsBtn) return;
+    els.settingsPanel.hidden = true;
+  });
+  els.setTheme.addEventListener('change', () => { cfg.theme = els.setTheme.value; saveCfg(); applyCfg(); });
+  els.setBg.addEventListener('input', () => { cfg.bg = els.setBg.value; saveCfg(); if (cfg.theme === 'custom') applyCfg(); });
+  els.setFg.addEventListener('input', () => { cfg.fg = els.setFg.value; saveCfg(); if (cfg.theme === 'custom') applyCfg(); });
+  els.setAccent.addEventListener('input', () => { cfg.accent = els.setAccent.value; saveCfg(); if (cfg.theme === 'custom') applyCfg(); });
+  els.setCols.addEventListener('change', () => { cfg.cols = els.setCols.value; saveCfg(); applyCfg(); });
+  els.setHoldToRead.addEventListener('change', () => { cfg.holdToRead = els.setHoldToRead.checked; saveCfg(); });
+  els.setPhantom.addEventListener('change', () => { cfg.phantom = els.setPhantom.checked; saveCfg(); applyCfg(); if (S.mode === 'word' && cfg.phantom) updatePhantom(); });
+  els.setPunctPause.addEventListener('change', () => { cfg.punctPause = els.setPunctPause.checked; saveCfg(); });
+
+  // ---- touch gestures: tap or hold to read; horizontal drag = continuous scrub ----
   function attachGestures(el) {
-    let g = null;
+    let g = null, holdTimer = null;
     function applyScrubIdx(newIdx) {
       if (newIdx === S.idx) return;
       S.idx = newIdx;
       const shown = S.units[Math.max(0, newIdx - 1)];
-      if (S.mode === 'word') renderWord(shown || '');
-      else renderSentence(shown);
+      if (S.mode === 'word') renderWord(shown || ''); else renderSentence(shown);
       const bar = S.mode === 'word' ? $('progressW') : $('progressS');
       bar.style.transition = 'none';
       bar.style.width = `${(newIdx / Math.max(1, S.units.length)) * 100}%`;
@@ -579,49 +753,54 @@ if ('serviceWorker' in navigator) {
       if (e.touches.length !== 1) { g = null; return; }
       const t = e.touches[0];
       g = { x: t.clientX, y: t.clientY, t: Date.now(),
-            startIdx: S.idx, scrubbing: false, axis: null };
+            startIdx: S.idx, scrubbing: false, axis: null, holdActive: false };
+      if (cfg.holdToRead && !S.playing) {
+        holdTimer = setTimeout(() => {
+          if (g && !g.scrubbing && !g.axis) { g.holdActive = true; play(); }
+        }, 100);
+      }
     }, { passive: true });
     el.addEventListener('touchmove', e => {
       if (!g || e.touches.length !== 1) return;
       const t = e.touches[0];
       const dx = t.clientX - g.x, dy = t.clientY - g.y;
-      if (!g.axis && Math.hypot(dx, dy) > 12)
+      if (!g.axis && Math.hypot(dx, dy) > 12) {
         g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      }
       if (g.axis === 'x' && S.units.length) {
         if (!g.scrubbing) { g.scrubbing = true; if (S.playing) pause(); }
         const sign = Math.sign(dx), mag = Math.abs(dx);
         let delta;
-        if (mag < 40) {
-          delta = sign * Math.round(mag / 8);
-        } else {
-          const overflow = mag - 40;
-          const fraction = overflow / window.innerWidth;
+        if (mag < 40) delta = sign * Math.round(mag / 8);
+        else {
+          const overflow = mag - 40, fraction = overflow / window.innerWidth;
           delta = sign * (5 + Math.round(fraction * S.units.length * 0.7));
         }
         applyScrubIdx(Math.max(0, Math.min(S.units.length, g.startIdx + delta)));
       }
     }, { passive: true });
     el.addEventListener('touchend', () => {
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
       if (!g) return;
       const dt = Date.now() - g.t;
-      if (!g.axis && dt < 350) toggle();
+      if (g.holdActive) pause();
+      else if (!g.axis && dt < 350) toggle();
       g = null;
     });
   }
   attachGestures(els.stageWord);
   attachGestures(els.stageSentence);
 
-  // page mode: ctrl/meta + wheel to zoom; touch native scroll handles paging
+  // page mode wheel zoom
   els.pageScroll.addEventListener('wheel', e => {
     if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(S.zoom + (e.deltaY < 0 ? 0.1 : -0.1)); return; }
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      els.pageScroll.scrollLeft += e.deltaY; e.preventDefault();
-    }
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { els.pageScroll.scrollLeft += e.deltaY; e.preventDefault(); }
   }, { passive: false });
 
-  // hardware keyboard support (works when bluetooth keyboard attached)
+  // hardware keyboard
   window.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     switch (e.key) {
       case ' ': e.preventDefault(); toggle(); break;
       case 'ArrowLeft':
@@ -632,15 +811,18 @@ if ('serviceWorker' in navigator) {
         else { e.preventDefault(); jump(e.shiftKey ? 20 : 1); } break;
       case 'ArrowUp': els.wpm.value = Math.min(1200, getWpm() + 25); updateStatus(); break;
       case 'ArrowDown': els.wpm.value = Math.max(50, getWpm() - 25); updateStatus(); break;
+      case '[': jumpHeading(-1); break;
+      case ']': jumpHeading(1); break;
       case '1': setMode('word'); break;
       case '2': setMode('sentence'); break;
       case '3': setMode('bionic'); break;
       case '4': setMode('page'); break;
+      case ',': toggleSettings(); break;
     }
   });
 
-  // initialize bar visibility
   els.bar.style.setProperty('--flash', 'flex');
+  loadCfg(); applyCfg();
 })();
 </script>
 </body>
