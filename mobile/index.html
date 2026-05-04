@@ -347,6 +347,12 @@
   .custom-only { display: none !important; }
   .panel.show-custom .custom-only { display: flex !important; }
 
+  /* focus mode: dim everything except the stage and (if on) the context strip while playing */
+  body.is-playing header,
+  body.is-playing .hints-bar { opacity: 0.18; transition: opacity 0.35s ease; }
+  body:not(.is-playing) header,
+  body:not(.is-playing) .hints-bar { opacity: 1; transition: opacity 0.35s ease; }
+
   /* gesture hints bar */
   .hints-bar { border-top: 1px solid var(--border);
     padding: 7px 10px calc(7px + var(--safe-bot));
@@ -469,15 +475,6 @@
   </div>
 </div>
 
-<div class="hints-bar">
-  <span><kbd>hold</kbd> read</span>
-  <span><kbd>tap</kbd> play/pause</span>
-  <span><kbd>↔</kbd> seek</span>
-  <span><kbd>↕</kbd> wpm</span>
-  <span><kbd>☰</kbd> library</span>
-  <span><kbd>⚙</kbd> settings</span>
-</div>
-
 <div class="wpm-toast" id="wpmToast">350 wpm</div>
 
 <main id="main">
@@ -506,6 +503,15 @@
 
 <div class="context-strip" id="contextStrip">
   <div class="context-inner" id="contextInner"><span class="ctx-empty">load a file to see context</span></div>
+</div>
+
+<div class="hints-bar">
+  <span><kbd>hold</kbd> read</span>
+  <span><kbd>tap</kbd> play/pause</span>
+  <span><kbd>↔</kbd> seek</span>
+  <span><kbd>↕</kbd> wpm</span>
+  <span><kbd>☰</kbd> library</span>
+  <span><kbd>⚙</kbd> settings</span>
 </div>
 
 <div class="library" id="library" hidden>
@@ -943,10 +949,12 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
   function play() {
     if (!isFlash() || !S.units.length) return;
     if (S.idx >= S.units.length) S.idx = 0;
-    S.playing = true; acquireWakeLock(); step();
+    S.playing = true; document.body.classList.add('is-playing');
+    acquireWakeLock(); step();
   }
   function pause() {
-    S.playing = false; releaseWakeLock();
+    S.playing = false; document.body.classList.remove('is-playing');
+    releaseWakeLock();
     if (S.timer) { clearTimeout(S.timer); S.timer = null; }
   }
   const toggle = () => S.playing ? pause() : play();

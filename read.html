@@ -291,6 +291,12 @@
     opacity: 0; transition: opacity 0.15s ease, transform 0.15s ease; }
   .wpm-toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
+  /* focus mode: dim everything except the stage and (if on) the context strip while playing */
+  body.is-playing header,
+  body.is-playing footer { opacity: 0.18; transition: opacity 0.35s ease; }
+  body:not(.is-playing) header,
+  body:not(.is-playing) footer { opacity: 1; transition: opacity 0.35s ease; }
+
   footer { padding: 8px 14px; border-top: 1px solid var(--border);
     font-size: 11px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; }
   kbd { font-family: ui-monospace, monospace; font-size: 10px;
@@ -817,10 +823,12 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
   function play() {
     if (!isFlash() || !S.units.length) return;
     if (S.idx >= S.units.length) S.idx = 0;
-    S.playing = true; els.playBtn.textContent = 'pause'; step();
+    S.playing = true; document.body.classList.add('is-playing');
+    els.playBtn.textContent = 'pause'; step();
   }
   function pause() {
-    S.playing = false; els.playBtn.textContent = 'play';
+    S.playing = false; document.body.classList.remove('is-playing');
+    els.playBtn.textContent = 'play';
     if (S.timer) { clearTimeout(S.timer); S.timer = null; }
   }
   const toggle = () => S.playing ? pause() : play();
