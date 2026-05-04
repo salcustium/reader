@@ -214,27 +214,83 @@
   .page-stage .doc.cols-6 { column-count: 6; column-width: auto; }
   .page-stage .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 15px; }
 
-  /* bottom action bar */
-  .bar { padding: 8px 12px calc(8px + var(--safe-bot));
-    border-top: 1px solid var(--border); background: var(--bg);
-    display: flex; gap: 6px; align-items: center; }
-  .bar button { padding: 9px 0; flex: 1;
-    background: var(--panel); color: var(--fg); border: 1px solid var(--border);
-    border-radius: 8px; font: inherit; font-size: 14px; touch-action: manipulation; }
-  .bar button.primary { background: var(--accent); color: #111; border-color: var(--accent); flex: 1.4; font-weight: 600; }
-  .bar button.icon { flex: 0 0 44px; font-size: 16px; }
-  .bar input[type=number] { width: 60px; padding: 8px 4px; text-align: center;
+  /* context strip (paragraph preview during word/sentence playback) */
+  .context-strip { background: var(--panel); border-top: 1px solid var(--border);
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .context-strip.show { max-height: 32vh; }
+  .context-inner { height: 32vh; overflow-y: auto;
+    padding: 12px 16px calc(12px + var(--safe-bot));
+    font-size: 14px; line-height: 1.65; color: var(--dim);
+    -webkit-overflow-scrolling: touch; }
+  .context-inner .ctx-w { transition: color 0.15s, background 0.15s;
+    border-radius: 3px; }
+  .context-inner .ctx-w.active {
+    color: var(--accent); font-weight: 600;
+    background: rgba(255,82,82,0.18);
+    padding: 1px 5px; margin: 0 -2px; }
+  .context-inner .ctx-empty { color: var(--dim); opacity: 0.6; font-style: italic; }
+
+  /* library overlay */
+  .library { position: fixed; inset: 0; background: var(--bg); z-index: 80;
+    display: flex; flex-direction: column; }
+  .library[hidden] { display: none; }
+  .lib-header { padding: calc(10px + var(--safe-top)) 14px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: center; }
+  .lib-header h2 { margin: 0; flex: 1; font-size: 18px; font-weight: 600; color: var(--fg); }
+  .lib-header button { padding: 9px 14px; min-height: 40px;
     background: var(--panel); color: var(--fg);
-    border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 13px; }
-  .bar.flash-only > .flash-only,
-  .bar:not(.flash-only) > .flash-only { display: var(--flash, flex); }
+    border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: 13px; touch-action: manipulation; }
+  .lib-header .lib-add { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
+  .lib-header .lib-close { padding: 6px 14px; font-size: 22px; line-height: 1; }
+  .lib-list { flex: 1; overflow-y: auto;
+    padding: 10px 14px calc(20px + var(--safe-bot)); -webkit-overflow-scrolling: touch; }
+  .lib-item { padding: 14px; border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 10px; background: var(--panel);
+    cursor: pointer; touch-action: manipulation; }
+  .lib-item:active { background: var(--border); }
+  .lib-item .name { font-weight: 600; margin-bottom: 6px; word-break: break-word;
+    color: var(--fg); padding-right: 70px; }
+  .lib-item .meta { font-size: 12px; color: var(--dim);
+    display: flex; gap: 10px; flex-wrap: wrap; }
+  .lib-item .pbar { height: 3px; background: var(--border); border-radius: 2px;
+    margin-top: 10px; overflow: hidden; }
+  .lib-item .pbar > div { height: 100%; background: var(--accent); }
+  .lib-item .actions { float: right; }
+  .lib-item .actions button { background: transparent;
+    border: 1px solid var(--border); color: var(--dim);
+    padding: 6px 10px; border-radius: 6px;
+    font: inherit; font-size: 12px; touch-action: manipulation; }
+  .lib-empty { padding: 80px 20px; text-align: center; color: var(--dim); font-size: 15px; line-height: 1.5; }
+
+  /* bottom action bar */
+  .bar { padding: 8px 10px calc(8px + var(--safe-bot));
+    border-top: 1px solid var(--border); background: var(--bg);
+    display: flex; gap: 8px; align-items: stretch; }
+  .bar button { padding: 12px 0; flex: 1; min-height: 44px;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+    border-radius: 10px; font: inherit; font-size: 15px;
+    touch-action: manipulation; line-height: 1; }
+  .bar button:active { background: var(--border); }
+  .bar button.primary { background: var(--accent); color: #111;
+    border-color: var(--accent); flex: 1.6; font-weight: 600; }
+  .bar button.gear { flex: 0 0 56px; font-size: 18px; }
+  .bar > .flash-only { display: var(--flash-disp, flex); }
+  .panel .row.btns { gap: 8px; }
+  .panel .row.btns button {
+    flex: 1; padding: 10px 8px; min-height: 44px;
+    background: var(--bg); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 8px;
+    font: inherit; font-size: 13px; }
+  .panel .row.btns button:active { background: var(--border); }
 </style>
 </head>
 <body>
 <header>
-  <label class="file-label">open .md
-    <input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain">
-  </label>
+  <button id="libBtn" class="file-label">library</button>
+  <input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple>
   <div class="modes" id="modes">
     <button data-mode="word" class="active">word</button>
     <button data-mode="sentence">sentence</button>
@@ -247,10 +303,23 @@
     <button id="zoomIn">+</button>
   </span>
   <div class="spacer"></div>
-  <div class="status" id="status">no file loaded · tap to play, swipe to seek</div>
+  <div class="status" id="status">no file loaded · tap library to import</div>
 </header>
 
 <div class="panel" id="settingsPanel" hidden>
+  <h3>playback</h3>
+  <div class="row">
+    <label>wpm</label>
+    <input type="number" id="wpm" value="350" min="50" max="1200" step="25">
+  </div>
+  <div class="row btns">
+    <button id="prevHeadingBtn">‹ heading</button>
+    <button id="nextHeadingBtn">heading ›</button>
+  </div>
+  <div class="row btns">
+    <button id="restartBtn">restart</button>
+  </div>
+  <hr>
   <h3>theme</h3>
   <div class="row">
     <label>theme</label>
@@ -280,6 +349,7 @@
   <div class="row"><label>hold to read</label><input type="checkbox" id="setHoldToRead"></div>
   <div class="row"><label>phantom words</label><input type="checkbox" id="setPhantom"></div>
   <div class="row"><label>pause on punctuation</label><input type="checkbox" id="setPunctPause" checked></div>
+  <div class="row"><label>context strip</label><input type="checkbox" id="setContext"></div>
 </div>
 
 <main id="main">
@@ -287,33 +357,43 @@
     <div class="guides top"></div><div class="guides bot"></div>
     <div class="ticks top"></div><div class="ticks bot"></div>
     <div class="phantom prev" id="phantomPrev"></div>
-    <div class="word idle" id="word">tap "open .md" to load a file</div>
+    <div class="word idle" id="word">tap library to open a file</div>
     <div class="phantom next" id="phantomNext"></div>
     <div class="progress" id="progressW"></div>
   </div>
   <div class="stage sentence-stage" id="stageSentence" hidden>
-    <div class="sentence idle" id="sentence">tap "open .md" to load a file</div>
+    <div class="sentence idle" id="sentence">tap library to open a file</div>
     <div class="meta" id="sentenceMeta"></div>
     <div class="progress" id="progressS"></div>
   </div>
   <div class="bionic" id="stageBionic" hidden>
-    <div class="empty" id="bionicEmpty">tap "open .md" to load a file</div>
+    <div class="empty" id="bionicEmpty">tap library to open a file</div>
     <div class="doc" id="bionicDoc"></div>
   </div>
   <div class="page-stage" id="stagePage" hidden>
-    <div class="empty" id="pageEmpty">tap "open .md" to load a file</div>
+    <div class="empty" id="pageEmpty">tap library to open a file</div>
     <div class="scroll" id="pageScroll"><div class="doc" id="pageDoc"></div></div>
   </div>
 </main>
 
+<div class="context-strip" id="contextStrip">
+  <div class="context-inner" id="contextInner"><span class="ctx-empty">load a file to see context</span></div>
+</div>
+
+<div class="library" id="library" hidden>
+  <div class="lib-header">
+    <h2>library</h2>
+    <button id="addFiles" class="lib-add">+ add files</button>
+    <button id="closeLib" class="lib-close" title="close">×</button>
+  </div>
+  <div class="lib-list" id="libList"></div>
+</div>
+
 <div class="bar" id="bar">
-  <button id="prevHeadingBtn" class="icon" title="prev heading">⌘‹</button>
   <button id="prevBtn" class="flash-only">‹</button>
   <button id="playBtn" class="primary flash-only">play</button>
   <button id="nextBtn" class="flash-only">›</button>
-  <button id="nextHeadingBtn" class="icon" title="next heading">›⌘</button>
-  <input type="number" id="wpm" value="350" min="50" max="1200" step="25" class="flash-only">
-  <button id="settingsBtn" class="icon" title="settings">⚙</button>
+  <button id="settingsBtn" class="gear" title="settings">⚙</button>
 </div>
 
 <script>
@@ -335,20 +415,25 @@ if ('serviceWorker' in navigator) {
     status: $('status'), wpm: $('wpm'), playBtn: $('playBtn'),
     prevBtn: $('prevBtn'), nextBtn: $('nextBtn'),
     prevHeadingBtn: $('prevHeadingBtn'), nextHeadingBtn: $('nextHeadingBtn'),
+    restartBtn: $('restartBtn'),
     main: $('main'), file: $('file'), modes: $('modes'), bar: $('bar'),
     zoomCtrls: $('zoomCtrls'), zoomLabel: $('zoomLabel'), zoomOut: $('zoomOut'), zoomIn: $('zoomIn'),
     settingsBtn: $('settingsBtn'), settingsPanel: $('settingsPanel'),
     setTheme: $('setTheme'), setBg: $('setBg'), setFg: $('setFg'), setAccent: $('setAccent'),
     setCols: $('setCols'), setHoldToRead: $('setHoldToRead'),
     setPhantom: $('setPhantom'), setPunctPause: $('setPunctPause'),
+    setContext: $('setContext'),
+    contextStrip: $('contextStrip'), contextInner: $('contextInner'),
   };
   const S = { rawMd: '', fileName: '', mode: 'word', units: [], idx: 0,
-    playing: false, timer: null, zoom: 1 };
+    playing: false, timer: null, zoom: 1,
+    contexts: [], contextOf: [], posInContext: [] };
 
   // ---- config ----
   const cfg = {
     theme: 'dark', bg: '#111111', fg: '#eeeeee', accent: '#ff5252',
-    cols: 'auto', holdToRead: false, phantom: false, punctPause: true, statusMode: 0,
+    cols: 'auto', holdToRead: false, phantom: false, punctPause: true,
+    context: false, statusMode: 0,
   };
   function loadCfg() {
     try { Object.assign(cfg, JSON.parse(localStorage.getItem('reader-cfg') || '{}')); } catch {}
@@ -388,7 +473,10 @@ if ('serviceWorker' in navigator) {
     els.setHoldToRead.checked = cfg.holdToRead;
     els.setPhantom.checked = cfg.phantom;
     els.setPunctPause.checked = cfg.punctPause;
+    els.setContext.checked = cfg.context;
     els.settingsPanel.classList.toggle('show-custom', cfg.theme === 'custom');
+    els.contextStrip.classList.toggle('show', cfg.context);
+    if (cfg.context) renderContext();
     // theme-color meta for browser chrome
     const tc = document.querySelector('meta[name=theme-color]');
     if (tc) tc.setAttribute('content', getComputedStyle(html).getPropertyValue('--bg').trim());
@@ -407,43 +495,94 @@ if ('serviceWorker' in navigator) {
   }
   const renderHTML = md => marked.parse(preprocessObsidian(md));
 
-  function tokenizeWords(md) {
-    const text = md
-      .replace(/```[\s\S]*?```/g, ' ').replace(/`[^`]*`/g, ' ')
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-      .replace(/^[ \t]*#{1,6}[ \t]*/gm, '')
-      .replace(/^[ \t]*>[ \t]?/gm, '')
-      .replace(/^[ \t]*[-*+][ \t]+/gm, '')
-      .replace(/^[ \t]*\d+\.[ \t]+/gm, '')
-      .replace(/(\*\*|__|\*|_|~~)(.+?)\1/g, '$2')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ').trim();
+  function tokenizeWord(w) {
+    if (w.length <= 13) return [w];
     const out = [];
-    for (const w of text.split(/\s+/).filter(Boolean)) {
-      if (w.length <= 13) { out.push(w); continue; }
-      for (let i = 0; i < w.length; i += 12) {
-        const chunk = w.slice(i, i + 12);
-        out.push(i + 12 < w.length ? chunk + '-' : chunk);
+    for (let i = 0; i < w.length; i += 12) {
+      const chunk = w.slice(i, i + 12);
+      out.push(i + 12 < w.length ? chunk + '-' : chunk);
+    }
+    return out;
+  }
+  function tokenizeText(text) {
+    const cleaned = text
+      .replace(/`[^`]*`/g, ' ').replace(/[*_~]+/g, '')
+      .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const out = [];
+    for (const w of cleaned.split(' ').filter(Boolean)) out.push(...tokenizeWord(w));
+    return out;
+  }
+  function buildWordUnits(md) {
+    const out = { units: [], contexts: [], contextOf: [], posInContext: [] };
+    if (typeof marked === 'undefined') {
+      for (const w of tokenizeText(md)) {
+        out.units.push(w); out.contextOf.push(0); out.posInContext.push(out.units.length - 1);
+      }
+      out.contexts.push({ spans: out.units.slice(), type: 'paragraph' });
+      return out;
+    }
+    const tokens = marked.lexer(preprocessObsidian(md));
+    function addCtx(text, type) {
+      const spans = tokenizeText(text);
+      if (!spans.length) return;
+      const ctxIdx = out.contexts.length;
+      out.contexts.push({ spans, type });
+      for (let i = 0; i < spans.length; i++) {
+        out.units.push(spans[i]);
+        out.contextOf.push(ctxIdx);
+        out.posInContext.push(i);
       }
     }
+    function walk(toks) {
+      for (const t of toks) {
+        switch (t.type) {
+          case 'heading': addCtx(t.text, 'heading'); break;
+          case 'paragraph': addCtx(t.text, 'paragraph'); break;
+          case 'blockquote': addCtx(t.text || '', 'quote'); break;
+          case 'list':
+            for (const item of t.items) addCtx(item.text || '', 'list-item');
+            break;
+          case 'table':
+            for (const row of [t.header, ...(t.rows || [])]) {
+              if (row) addCtx(row.map(c => (c && c.text) || c || '').join(' '), 'table-row');
+            }
+            break;
+          case 'code': addCtx(t.text || '', 'code'); break;
+          case 'hr': case 'space': break;
+          default: if (t.text) addCtx(t.text, 'other');
+        }
+      }
+    }
+    walk(tokens);
     return out;
   }
 
   function buildSentenceUnits(md) {
-    if (typeof marked === 'undefined') return [];
+    const out = { units: [], contexts: [], contextOf: [], posInContext: [] };
+    if (typeof marked === 'undefined') return out;
     const tokens = marked.lexer(preprocessObsidian(md));
-    const cards = [];
     const splitInto = text => text.split(/(?<=[.!?])\s+(?=[A-Z(\["'])/).map(p => p.trim()).filter(Boolean);
+    function addCtx(spans, type, makeUnit) {
+      if (!spans.length) return;
+      const ctxIdx = out.contexts.length;
+      out.contexts.push({ spans, type });
+      for (let i = 0; i < spans.length; i++) {
+        out.units.push(makeUnit(spans[i], i));
+        out.contextOf.push(ctxIdx);
+        out.posInContext.push(i);
+      }
+    }
     function walk(toks) {
       for (const t of toks) {
         switch (t.type) {
           case 'heading':
-            cards.push({ html: `<h${t.depth}>${marked.parseInline(t.text)}</h${t.depth}>`,
-              words: countWords(t.text), type: 'heading' }); break;
+            addCtx([t.text], 'heading', s => ({
+              html: `<h${t.depth}>${marked.parseInline(s)}</h${t.depth}>`,
+              words: countWords(s), type: 'heading' }));
+            break;
           case 'paragraph':
-            for (const s of splitInto(t.text))
-              cards.push({ html: marked.parseInline(s), words: countWords(s), type: 'sentence' });
+            addCtx(splitInto(t.text), 'paragraph', s => ({
+              html: marked.parseInline(s), words: countWords(s), type: 'sentence' }));
             break;
           case 'list':
             for (let i = 0; i < t.items.length; i++) {
@@ -451,25 +590,34 @@ if ('serviceWorker' in navigator) {
               const marker = t.ordered
                 ? `<span class="bullet">${(t.start || 1) + i}.</span> `
                 : `<span class="bullet">•</span> `;
-              cards.push({ html: marker + marked.parseInline(txt), words: countWords(txt), type: 'list-item' });
-            } break;
+              addCtx([txt], 'list-item', s => ({
+                html: marker + marked.parseInline(s), words: countWords(s), type: 'list-item' }));
+            }
+            break;
           case 'table': {
             const rowWords = (t.header || []).reduce((a, c) => a + countWords(c.text || ''), 0)
               + (t.rows || []).reduce((a, r) => a + r.reduce((b, c) => b + countWords(c.text || ''), 0), 0);
-            cards.push({ html: marked.parser([t]), words: Math.max(20, rowWords), type: 'table' }); break;
+            addCtx(['table'], 'table', () => ({
+              html: marked.parser([t]), words: Math.max(20, rowWords), type: 'table' }));
+            break;
           }
           case 'code':
-            cards.push({ html: marked.parser([t]), words: Math.max(8, countWords(t.text)), type: 'code' }); break;
+            addCtx(['code block'], 'code', () => ({
+              html: marked.parser([t]), words: Math.max(8, countWords(t.text)), type: 'code' }));
+            break;
           case 'blockquote':
-            cards.push({ html: marked.parser([t]), words: Math.max(3, countWords(t.text || '')), type: 'quote' }); break;
+            addCtx(['blockquote'], 'quote', () => ({
+              html: marked.parser([t]), words: Math.max(3, countWords(t.text || '')), type: 'quote' }));
+            break;
           case 'hr': case 'space': break;
           default:
-            if (t.text) cards.push({ html: marked.parseInline(t.text), words: countWords(t.text), type: 'sentence' });
+            if (t.text) addCtx(splitInto(t.text), 'paragraph', s => ({
+              html: marked.parseInline(s), words: countWords(s), type: 'sentence' }));
         }
       }
     }
     walk(tokens);
-    return cards;
+    return out;
   }
 
   // ---- ORP + render ----
@@ -503,6 +651,32 @@ if ('serviceWorker' in navigator) {
     els.sentence.innerHTML = u.html;
     els.sentenceMeta.textContent =
       `${u.words} words${u.type && u.type !== 'sentence' ? ' · ' + u.type : ''}`;
+  }
+
+  // ---- context strip ----
+  function renderContext() {
+    if (!cfg.context) return;
+    if (!isFlash() || !S.units.length) {
+      els.contextInner.innerHTML = '<span class="ctx-empty">no context for this mode</span>'; return;
+    }
+    const lastShown = Math.max(0, S.idx - 1);
+    const ctxIdx = S.contextOf[lastShown];
+    if (ctxIdx === undefined) { els.contextInner.innerHTML = ''; return; }
+    const ctx = S.contexts[ctxIdx];
+    if (!ctx) { els.contextInner.innerHTML = ''; return; }
+    const pos = S.posInContext[lastShown];
+    const sep = S.mode === 'word' ? ' ' : ' ';
+    els.contextInner.innerHTML = ctx.spans.map((s, i) =>
+      `<span class="ctx-w${i === pos ? ' active' : ''}">${esc(s)}</span>`
+    ).join(sep);
+    const active = els.contextInner.querySelector('.ctx-w.active');
+    if (active) {
+      const ir = els.contextInner.getBoundingClientRect();
+      const ar = active.getBoundingClientRect();
+      if (ar.top < ir.top + 16 || ar.bottom > ir.bottom - 16) {
+        active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+    }
   }
 
   function bionicify(root) {
@@ -574,6 +748,7 @@ if ('serviceWorker' in navigator) {
     const u = S.units[S.idx];
     if (S.mode === 'word') renderWord(u); else renderSentence(u);
     updateStatus();
+    if (cfg.context) renderContext();
     const d = S.mode === 'word' ? delayForWord(u) : delayForSentence(u);
     const bar = S.mode === 'word' ? $('progressW') : $('progressS');
     bar.style.transition = `width ${d}ms linear`;
@@ -601,6 +776,7 @@ if ('serviceWorker' in navigator) {
     bar.style.transition = 'none';
     bar.style.width = `${(S.idx / Math.max(1, S.units.length)) * 100}%`;
     updateStatus();
+    if (cfg.context) renderContext();
   }
 
   function jumpHeading(dir) {
@@ -640,7 +816,7 @@ if ('serviceWorker' in navigator) {
   }
 
   function updateStatus() {
-    if (!S.rawMd) { els.status.textContent = 'no file loaded · tap to play, swipe to seek'; return; }
+    if (!S.rawMd) { els.status.textContent = 'no file loaded · tap library to import'; return; }
     if (!isFlash()) { els.status.textContent = `${S.fileName} · ${S.mode}`; return; }
     const wpm = getWpm(); const total = S.units.length; const done = S.idx;
     const wordsLeft = S.mode === 'word' ? Math.max(0, total - done)
@@ -667,20 +843,24 @@ if ('serviceWorker' in navigator) {
     els.stageBionic.hidden = m !== 'bionic';
     els.pageStage.hidden = m !== 'page';
     els.zoomCtrls.hidden = m !== 'page';
-    els.bar.style.setProperty('--flash', isFlash() ? 'flex' : 'none');
+    els.bar.style.setProperty('--flash-disp', isFlash() ? 'flex' : 'none');
     if (S.rawMd) buildForMode(); else updateStatus();
   }
   function buildForMode() {
     S.idx = 0;
     if (S.mode === 'word') {
-      S.units = tokenizeWords(S.rawMd);
+      const r = buildWordUnits(S.rawMd);
+      S.units = r.units; S.contexts = r.contexts; S.contextOf = r.contextOf; S.posInContext = r.posInContext;
       $('progressW').style.transition = 'none'; $('progressW').style.width = '0%';
       renderWord(S.units[0] || '');
       if (cfg.phantom) updatePhantom();
+      renderContext();
     } else if (S.mode === 'sentence') {
-      S.units = buildSentenceUnits(S.rawMd);
+      const r = buildSentenceUnits(S.rawMd);
+      S.units = r.units; S.contexts = r.contexts; S.contextOf = r.contextOf; S.posInContext = r.posInContext;
       $('progressS').style.transition = 'none'; $('progressS').style.width = '0%';
       renderSentence(S.units[0]);
+      renderContext();
     } else if (S.mode === 'bionic') {
       S.units = [];
       els.bionicDoc.innerHTML = renderHTML(S.rawMd); bionicify(els.bionicDoc);
@@ -700,15 +880,172 @@ if ('serviceWorker' in navigator) {
   }
   const setZoom = z => { S.zoom = Math.max(0.5, Math.min(3, +z.toFixed(2))); applyZoom(); };
 
-  async function loadFile(file) { S.rawMd = await file.text(); S.fileName = file.name; buildForMode(); }
+  // ---- library (IndexedDB) ----
+  let dbHandle = null;
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (dbHandle) return resolve(dbHandle);
+      const req = indexedDB.open('reader', 1);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('files'))
+          db.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
+      };
+      req.onsuccess = e => { dbHandle = e.target.result; resolve(dbHandle); };
+      req.onerror = e => reject(e.target.error);
+    });
+  }
+  const dbPromise = (mode, run) => openDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('files', mode);
+    const r = run(tx.objectStore('files'));
+    if (r && r.onsuccess !== undefined) {
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    } else {
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    }
+  }));
+  const libList = () => dbPromise('readonly', s => s.getAll());
+  const libGet = id => dbPromise('readonly', s => s.get(id));
+  const libAdd = entry => dbPromise('readwrite', s => s.add(entry));
+  const libRemove = id => dbPromise('readwrite', s => s.delete(id));
+  function libUpdate(id, partial) {
+    return openDB().then(db => new Promise((res, rej) => {
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      const get = store.get(id);
+      get.onsuccess = () => {
+        const obj = get.result;
+        if (!obj) return res();
+        Object.assign(obj, partial);
+        const put = store.put(obj);
+        put.onsuccess = () => res();
+        put.onerror = () => rej(put.error);
+      };
+      get.onerror = () => rej(get.error);
+    }));
+  }
+
+  const libraryEl = $('library'), libListEl = $('libList');
+  const fmtBytes = n =>
+    n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
+  const fmtRel = ts => {
+    if (!ts) return '';
+    const d = (Date.now() - ts) / 1000;
+    if (d < 60) return 'just now';
+    if (d < 3600) return Math.floor(d/60) + 'm ago';
+    if (d < 86400) return Math.floor(d/3600) + 'h ago';
+    if (d < 86400*30) return Math.floor(d/86400) + 'd ago';
+    return new Date(ts).toLocaleDateString();
+  };
+
+  async function renderLibrary() {
+    let items = [];
+    try { items = await libList(); } catch {}
+    if (!items.length) {
+      libListEl.innerHTML = '<div class="lib-empty">no files yet<br>tap “+ add files” to import .md files from your phone</div>';
+      return;
+    }
+    items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
+    libListEl.innerHTML = items.map(it => {
+      const total = it.totalUnits || 0;
+      const pct = total ? Math.min(100, Math.round((it.lastIdx || 0) / total * 100)) : 0;
+      return `<div class="lib-item" data-id="${it.id}">
+        <div class="actions"><button data-del="${it.id}">delete</button></div>
+        <div class="name">${esc(it.name)}</div>
+        <div class="meta">
+          <span>${fmtBytes(it.size || 0)}</span>
+          <span>${fmtRel(it.lastOpenedAt)}</span>
+          ${total ? `<span>${pct}% read</span>` : ''}
+        </div>
+        ${total ? `<div class="pbar"><div style="width:${pct}%"></div></div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  function openLibrary() { libraryEl.hidden = false; renderLibrary(); }
+  function closeLibrary() { libraryEl.hidden = true; }
+
+  async function importFile(file, makeActive) {
+    const text = await file.text();
+    let items = []; try { items = await libList(); } catch {}
+    const existing = items.find(f => f.name === file.name);
+    let id;
+    if (existing) {
+      id = existing.id;
+      await libUpdate(id, { content: text, size: text.length, lastOpenedAt: Date.now() });
+    } else {
+      id = await libAdd({
+        name: file.name, content: text, size: text.length,
+        addedAt: Date.now(), lastOpenedAt: Date.now(),
+        lastIdx: 0, lastMode: S.mode, totalUnits: 0,
+      });
+    }
+    if (makeActive) {
+      S.libId = id; S.rawMd = text; S.fileName = file.name;
+      buildForMode();
+    }
+  }
+
+  async function loadEntry(entry) {
+    S.libId = entry.id; S.rawMd = entry.content; S.fileName = entry.name;
+    libUpdate(entry.id, { lastOpenedAt: Date.now() });
+    if (entry.lastMode && entry.lastMode !== S.mode) setMode(entry.lastMode);
+    buildForMode();
+    if (typeof entry.lastIdx === 'number' && entry.lastIdx > 0 && entry.lastIdx < S.units.length) {
+      S.idx = entry.lastIdx;
+      if (isFlash()) {
+        const shown = S.units[Math.max(0, S.idx - 1)];
+        if (S.mode === 'word') renderWord(shown || ''); else renderSentence(shown);
+        const bar = S.mode === 'word' ? $('progressW') : $('progressS');
+        bar.style.transition = 'none';
+        bar.style.width = `${(S.idx / Math.max(1, S.units.length)) * 100}%`;
+        updateStatus();
+      }
+    }
+    closeLibrary();
+  }
+
+  function autosave() {
+    if (S.libId && S.rawMd)
+      libUpdate(S.libId, { lastIdx: S.idx, lastMode: S.mode, totalUnits: S.units.length || 0 });
+  }
+  setInterval(autosave, 5000);
+  window.addEventListener('beforeunload', autosave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') autosave();
+  });
 
   // ---- listeners ----
-  els.file.addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); });
+  $('libBtn').addEventListener('click', openLibrary);
+  $('closeLib').addEventListener('click', closeLibrary);
+  $('addFiles').addEventListener('click', () => els.file.click());
+  libListEl.addEventListener('click', async e => {
+    const del = e.target.closest('[data-del]');
+    if (del) { e.stopPropagation();
+      if (confirm('delete this file?')) { await libRemove(+del.dataset.del); renderLibrary(); }
+      return;
+    }
+    const item = e.target.closest('.lib-item');
+    if (!item) return;
+    const id = +item.dataset.id;
+    const entry = await libGet(id);
+    if (entry) loadEntry(entry);
+  });
+
+  els.file.addEventListener('change', async e => {
+    const files = [...e.target.files];
+    if (!files.length) return;
+    for (let i = 0; i < files.length; i++) await importFile(files[i], i === 0);
+    e.target.value = '';
+    if (!libraryEl.hidden) renderLibrary();
+  });
   els.playBtn.addEventListener('click', toggle);
   els.prevBtn.addEventListener('click', () => jump(-1));
   els.nextBtn.addEventListener('click', () => jump(1));
   els.prevHeadingBtn.addEventListener('click', () => jumpHeading(-1));
   els.nextHeadingBtn.addEventListener('click', () => jumpHeading(1));
+  els.restartBtn.addEventListener('click', () => { S.idx = 0; if (isFlash()) play(); });
   els.wpm.addEventListener('change', updateStatus);
   els.modes.addEventListener('click', e => {
     const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode);
@@ -735,6 +1072,9 @@ if ('serviceWorker' in navigator) {
   els.setHoldToRead.addEventListener('change', () => { cfg.holdToRead = els.setHoldToRead.checked; saveCfg(); });
   els.setPhantom.addEventListener('change', () => { cfg.phantom = els.setPhantom.checked; saveCfg(); applyCfg(); if (S.mode === 'word' && cfg.phantom) updatePhantom(); });
   els.setPunctPause.addEventListener('change', () => { cfg.punctPause = els.setPunctPause.checked; saveCfg(); });
+  els.setContext.addEventListener('change', () => {
+    cfg.context = els.setContext.checked; saveCfg(); applyCfg(); renderContext();
+  });
 
   // ---- touch gestures: tap or hold to read; horizontal drag = continuous scrub ----
   function attachGestures(el) {
@@ -748,6 +1088,7 @@ if ('serviceWorker' in navigator) {
       bar.style.transition = 'none';
       bar.style.width = `${(newIdx / Math.max(1, S.units.length)) * 100}%`;
       updateStatus();
+      if (cfg.context) renderContext();
     }
     el.addEventListener('touchstart', e => {
       if (e.touches.length !== 1) { g = null; return; }
@@ -821,8 +1162,18 @@ if ('serviceWorker' in navigator) {
     }
   });
 
-  els.bar.style.setProperty('--flash', 'flex');
+  els.bar.style.setProperty('--flash-disp', 'flex');
   loadCfg(); applyCfg();
+
+  // auto-resume: if there's a most-recent file in the library, load it silently
+  (async () => {
+    try {
+      const items = await libList();
+      if (!items.length) return;
+      items.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
+      loadEntry(items[0]);
+    } catch {}
+  })();
 })();
 </script>
 </body>
