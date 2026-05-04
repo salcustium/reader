@@ -347,6 +347,18 @@
   .custom-only { display: none !important; }
   .panel.show-custom .custom-only { display: flex !important; }
 
+  /* gesture hints bar */
+  .hints-bar { border-top: 1px solid var(--border);
+    padding: 7px 10px calc(7px + var(--safe-bot));
+    font-size: 11px; color: var(--dim);
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    background: var(--bg); }
+  .hints-bar span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .hints-bar kbd { font-family: ui-monospace, Menlo, monospace; font-size: 10px;
+    background: var(--panel); color: var(--fg);
+    border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px;
+    font-weight: 600; }
+
   /* WPM toast (vertical swipe feedback) */
   .wpm-toast {
     position: fixed; top: 50%; left: 50%;
@@ -455,6 +467,15 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="hints-bar">
+  <span><kbd>hold</kbd> read</span>
+  <span><kbd>tap</kbd> play/pause</span>
+  <span><kbd>↔</kbd> seek</span>
+  <span><kbd>↕</kbd> wpm</span>
+  <span><kbd>☰</kbd> library</span>
+  <span><kbd>⚙</kbd> settings</span>
 </div>
 
 <div class="wpm-toast" id="wpmToast">350 wpm</div>
@@ -587,7 +608,7 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
   // ---- config ----
   const cfg = {
     theme: 'dark', bg: '#111111', fg: '#eeeeee', accent: '#ff5252',
-    cols: 'auto', holdToRead: false, phantom: false, punctPause: true,
+    cols: 'auto', holdToRead: true, phantom: false, punctPause: true,
     context: false, statusMode: 0,
   };
   const loadCfg = () => { try { Object.assign(cfg, JSON.parse(localStorage.getItem('reader-cfg') || '{}')); } catch {} };
