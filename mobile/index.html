@@ -180,16 +180,6 @@
   .doc .embed { color: var(--dim); font-style: italic; }
   .doc del { color: var(--dim); }
 
-  /* bionic */
-  .bionic { position: absolute; inset: 0; overflow: auto;
-    padding: 18px 16px calc(40px + var(--safe-bot));
-    -webkit-overflow-scrolling: touch; }
-  .bionic[hidden] { display: none; }
-  .bionic .doc { max-width: 720px; margin: 0 auto;
-    font-size: 17px; line-height: 1.7; color: var(--dim); font-weight: 300; }
-  .bionic .doc b { font-weight: 700; color: var(--fg); }
-  .bionic .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 15px; }
-
   /* page */
   .page-stage { position: absolute; inset: 0; --zoom: 1; background: var(--bg); overflow: hidden;
     touch-action: pan-x pinch-zoom; }
@@ -386,7 +376,6 @@
   <div class="modes" id="modes">
     <button data-mode="word" class="active">word</button>
     <button data-mode="sentence">sentence</button>
-    <button data-mode="bionic">bionic</button>
     <button data-mode="page">page</button>
   </div>
   <span class="zoom" id="zoomCtrls" hidden>
@@ -491,10 +480,6 @@
     <div class="meta" id="sentenceMeta"></div>
     <div class="progress" id="progressS"></div>
   </div>
-  <div class="bionic" id="stageBionic" hidden>
-    <div class="empty" id="bionicEmpty">tap library to open a file</div>
-    <div class="doc" id="bionicDoc"></div>
-  </div>
   <div class="page-stage" id="stagePage" hidden>
     <div class="empty" id="pageEmpty">tap library to open a file</div>
     <div class="scroll" id="pageScroll"><div class="doc" id="pageDoc"></div></div>
@@ -536,9 +521,8 @@ if ('serviceWorker' in navigator) {
   const els = {
     word: $('word'), sentence: $('sentence'), sentenceMeta: $('sentenceMeta'),
     phantomPrev: $('phantomPrev'), phantomNext: $('phantomNext'),
-    bionicDoc: $('bionicDoc'), bionicEmpty: $('bionicEmpty'),
     pageDoc: $('pageDoc'), pageEmpty: $('pageEmpty'), pageScroll: $('pageScroll'), pageStage: $('stagePage'),
-    stageWord: $('stageWord'), stageSentence: $('stageSentence'), stageBionic: $('stageBionic'),
+    stageWord: $('stageWord'), stageSentence: $('stageSentence'),
     status: $('status'), wpm: $('wpm'),
     prevHeadingBtn: $('prevHeadingBtn'), nextHeadingBtn: $('nextHeadingBtn'),
     restartBtn: $('restartBtn'),
@@ -582,7 +566,6 @@ Later the merchant himself went down to the marketplace, and he saw Death standi
 
 - **word** — flashes one word at a time. Tap to play, swipe ↔ to seek, swipe ↕ for wpm.
 - **sentence** — flashes whole sentences with full markdown rendering.
-- **bionic** — full document, first ~40% of each word bolded.
 - **page** — paginated columns (auto / 1–6), pinch to zoom.
 
 Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or \`.pdf\` to replace this sample.
@@ -855,34 +838,6 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
     }
   }
 
-  function bionicify(root) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode(n) {
-        for (let p = n.parentNode; p && p !== root; p = p.parentNode)
-          if (p.tagName === 'CODE' || p.tagName === 'PRE') return NodeFilter.FILTER_REJECT;
-        return n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
-    });
-    const nodes = []; let n;
-    while ((n = walker.nextNode())) nodes.push(n);
-    for (const node of nodes) {
-      const frag = document.createDocumentFragment();
-      for (const p of node.nodeValue.split(/(\s+)/)) {
-        if (!p) continue;
-        if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); continue; }
-        const lead = (p.match(/^[^\p{L}\p{N}]+/u) || [''])[0];
-        const core = p.slice(lead.length);
-        if (!core) { frag.appendChild(document.createTextNode(p)); continue; }
-        const k = Math.max(1, Math.ceil(core.length * 0.4));
-        if (lead) frag.appendChild(document.createTextNode(lead));
-        const b = document.createElement('b'); b.textContent = core.slice(0, k);
-        frag.appendChild(b);
-        if (core.length > k) frag.appendChild(document.createTextNode(core.slice(k)));
-      }
-      node.parentNode.replaceChild(frag, node);
-    }
-  }
-
   // ---- timing ----
   const getWpm = () => Math.max(50, Math.min(1200, +els.wpm.value || 350));
   const setWpm = v => {
@@ -984,16 +939,6 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
       $('progressS').style.transition = 'none';
       $('progressS').style.width = `${(S.idx / Math.max(1, S.units.length)) * 100}%`;
       updateStatus(); if (cfg.context) renderContext();
-    } else if (S.mode === 'bionic') {
-      const heads = els.bionicDoc.querySelectorAll('h1,h2,h3,h4,h5,h6');
-      const cur = els.stageBionic.scrollTop;
-      const arr = dir > 0 ? [...heads] : [...heads].reverse();
-      for (const h of arr) {
-        const top = h.offsetTop;
-        if (dir > 0 ? top > cur + 40 : top < cur - 40) {
-          els.stageBionic.scrollTo({ top: Math.max(0, top - 20), behavior: 'smooth' }); return;
-        }
-      }
     } else if (S.mode === 'page') {
       const heads = els.pageDoc.querySelectorAll('h1,h2,h3,h4,h5,h6');
       const cur = els.pageScroll.scrollLeft;
@@ -1034,7 +979,6 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
       b.classList.toggle('active', b.dataset.mode === m);
     els.stageWord.hidden = m !== 'word';
     els.stageSentence.hidden = m !== 'sentence';
-    els.stageBionic.hidden = m !== 'bionic';
     els.pageStage.hidden = m !== 'page';
     els.zoomCtrls.hidden = m !== 'page';
     if (S.rawMd) buildForMode(); else updateStatus();
@@ -1054,10 +998,6 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
       $('progressS').style.transition = 'none'; $('progressS').style.width = '0%';
       renderSentence(S.units[0]);
       renderContext();
-    } else if (S.mode === 'bionic') {
-      S.units = [];
-      els.bionicDoc.innerHTML = renderHTML(S.rawMd); bionicify(els.bionicDoc);
-      els.bionicEmpty.style.display = els.bionicDoc.textContent.trim() ? 'none' : '';
     } else if (S.mode === 'page') {
       S.units = [];
       els.pageDoc.innerHTML = renderHTML(S.rawMd);
@@ -1374,8 +1314,7 @@ Open the **library** to manage saved files. Drop your own \`.md\`, \`.txt\`, or 
       case ']': jumpHeading(1); break;
       case '1': setMode('word'); break;
       case '2': setMode('sentence'); break;
-      case '3': setMode('bionic'); break;
-      case '4': setMode('page'); break;
+      case '3': setMode('page'); break;
       case ',': openSettings(); break;
       case 'Escape': closeSettings(); closeLibrary(); break;
     }

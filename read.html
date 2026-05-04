@@ -200,15 +200,6 @@
   .doc .embed { color: var(--dim); font-style: italic; }
   .doc del { color: var(--dim); }
 
-  /* bionic */
-  .bionic { position: absolute; inset: 0; overflow: auto;
-    padding: 28px clamp(20px, 6vw, 80px) 80px; }
-  .bionic[hidden] { display: none; }
-  .bionic .doc { max-width: 760px; margin: 0 auto;
-    font-size: 18px; line-height: 1.7; color: var(--dim); font-weight: 300; }
-  .bionic .doc b { font-weight: 700; color: var(--fg); }
-  .bionic .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 16px; }
-
   /* page */
   .page-stage { position: absolute; inset: 0; --zoom: 1; background: var(--bg); overflow: hidden; }
   .page-stage[hidden] { display: none; }
@@ -312,7 +303,6 @@
   <div class="modes" id="modes">
     <button data-mode="word" class="active">word</button>
     <button data-mode="sentence">sentence</button>
-    <button data-mode="bionic">bionic</button>
     <button data-mode="page">page</button>
   </div>
   <button id="playBtn">play</button>
@@ -395,10 +385,6 @@
     <div class="meta" id="sentenceMeta"></div>
     <div class="progress" id="progressS"></div>
   </div>
-  <div class="bionic" id="stageBionic" hidden>
-    <div class="empty" id="bionicEmpty">drag a .md file here, or open the library</div>
-    <div class="doc" id="bionicDoc"></div>
-  </div>
   <div class="page-stage" id="stagePage" hidden>
     <div class="empty" id="pageEmpty">drag a .md file here, or open the library</div>
     <div class="scroll" id="pageScroll"><div class="doc" id="pageDoc"></div></div>
@@ -425,7 +411,7 @@
   <span><kbd>←</kbd>/<kbd>→</kbd> seek · <kbd>shift</kbd>+ jump 20</span>
   <span><kbd>[</kbd>/<kbd>]</kbd> heading</span>
   <span><kbd>↑</kbd>/<kbd>↓</kbd> wpm ±25</span>
-  <span><kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>/<kbd>4</kbd> mode</span>
+  <span><kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> mode</span>
   <span><kbd>−</kbd>/<kbd>=</kbd> zoom (page)</span>
   <span><kbd>l</kbd> library · <kbd>,</kbd> settings · <kbd>r</kbd> restart · <kbd>0</kbd> start</span>
 </footer>
@@ -439,9 +425,8 @@
   const els = {
     word: $('word'), sentence: $('sentence'), sentenceMeta: $('sentenceMeta'),
     phantomPrev: $('phantomPrev'), phantomNext: $('phantomNext'),
-    bionicDoc: $('bionicDoc'), bionicEmpty: $('bionicEmpty'),
     pageDoc: $('pageDoc'), pageEmpty: $('pageEmpty'), pageScroll: $('pageScroll'), pageStage: $('stagePage'),
-    stageWord: $('stageWord'), stageSentence: $('stageSentence'), stageBionic: $('stageBionic'),
+    stageWord: $('stageWord'), stageSentence: $('stageSentence'),
     status: $('status'), wpm: $('wpm'), playBtn: $('playBtn'), restartBtn: $('restartBtn'),
     progressW: $('progressW'), progressS: $('progressS'),
     main: $('main'), file: $('file'), modes: $('modes'),
@@ -484,7 +469,6 @@ Later the merchant himself went down to the marketplace, and he saw Death standi
 
 - **word** — flashes one word at a time on a fixed point. Press space (or click the stage) to play.
 - **sentence** — flashes whole sentences with full markdown rendering. Best for theory-dense text.
-- **bionic** — full document, first ~40% of each word bolded so the eye fixates faster. Self-paced scrolling.
 - **page** — paginated columns (auto / 1–6), like a PDF reader. Ctrl+wheel to zoom.
 
 Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **library** to manage saved files.
@@ -748,34 +732,6 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
     }
   }
 
-  function bionicify(root) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode(n) {
-        for (let p = n.parentNode; p && p !== root; p = p.parentNode)
-          if (p.tagName === 'CODE' || p.tagName === 'PRE') return NodeFilter.FILTER_REJECT;
-        return n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
-    });
-    const nodes = []; let n;
-    while ((n = walker.nextNode())) nodes.push(n);
-    for (const node of nodes) {
-      const frag = document.createDocumentFragment();
-      for (const p of node.nodeValue.split(/(\s+)/)) {
-        if (!p) continue;
-        if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); continue; }
-        const lead = (p.match(/^[^\p{L}\p{N}]+/u) || [''])[0];
-        const core = p.slice(lead.length);
-        if (!core) { frag.appendChild(document.createTextNode(p)); continue; }
-        const k = Math.max(1, Math.ceil(core.length * 0.4));
-        if (lead) frag.appendChild(document.createTextNode(lead));
-        const b = document.createElement('b'); b.textContent = core.slice(0, k);
-        frag.appendChild(b);
-        if (core.length > k) frag.appendChild(document.createTextNode(core.slice(k)));
-      }
-      node.parentNode.replaceChild(frag, node);
-    }
-  }
-
   const getWpm = () => Math.max(50, Math.min(1200, +els.wpm.value || 350));
   const setWpm = v => { els.wpm.value = Math.max(50, Math.min(1200, Math.round(v))); };
   function delayForWord(w) {
@@ -858,16 +814,6 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
       els.progressS.style.transition = 'none';
       els.progressS.style.width = `${(S.idx / Math.max(1, S.units.length)) * 100}%`;
       updateStatus(); if (cfg.context) renderContext();
-    } else if (S.mode === 'bionic') {
-      const heads = els.bionicDoc.querySelectorAll('h1,h2,h3,h4,h5,h6');
-      const cur = els.stageBionic.scrollTop;
-      const arr = dir > 0 ? [...heads] : [...heads].reverse();
-      for (const h of arr) {
-        const top = h.offsetTop;
-        if (dir > 0 ? top > cur + 40 : top < cur - 40) {
-          els.stageBionic.scrollTo({ top: Math.max(0, top - 20), behavior: 'smooth' }); return;
-        }
-      }
     } else if (S.mode === 'page') {
       const heads = els.pageDoc.querySelectorAll('h1,h2,h3,h4,h5,h6');
       const cur = els.pageScroll.scrollLeft;
@@ -906,7 +852,6 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
       b.classList.toggle('active', b.dataset.mode === m);
     els.stageWord.hidden = m !== 'word';
     els.stageSentence.hidden = m !== 'sentence';
-    els.stageBionic.hidden = m !== 'bionic';
     els.pageStage.hidden = m !== 'page';
     els.zoomCtrls.hidden = m !== 'page';
     if (S.rawMd) buildForMode(); else updateStatus();
@@ -926,11 +871,6 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
       els.progressS.style.transition = 'none'; els.progressS.style.width = '0%';
       renderSentence(S.units[0]);
       renderContext();
-    } else if (S.mode === 'bionic') {
-      S.units = [];
-      els.bionicDoc.innerHTML = renderHTML(S.rawMd); bionicify(els.bionicDoc);
-      els.bionicEmpty.style.display = els.bionicDoc.textContent.trim() ? 'none' : '';
-      els.stageBionic.scrollTop = 0;
     } else if (S.mode === 'page') {
       S.units = [];
       els.pageDoc.innerHTML = renderHTML(S.rawMd);
@@ -1201,8 +1141,7 @@ Drop a \`.md\`, \`.txt\`, or \`.pdf\` file onto this window — or open the **li
       case '0': if (isFlash()) jump(-S.units.length); break;
       case '1': setMode('word'); break;
       case '2': setMode('sentence'); break;
-      case '3': setMode('bionic'); break;
-      case '4': setMode('page'); break;
+      case '3': setMode('page'); break;
       case '=': case '+': if (S.mode === 'page') setZoom(S.zoom + 0.1); break;
       case '-': case '_': if (S.mode === 'page') setZoom(S.zoom - 0.1); break;
       case ',': toggleSettings(); break;

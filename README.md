@@ -8,7 +8,6 @@ Live: **https://salcustium.github.io/reader/**
 
 - **word** — classic Rapid Serial Visual Presentation. One word at a time, centered on a red ORP letter.
 - **sentence** — flashes one sentence (or table / code block / blockquote / list item) at a time with full markdown rendering. Best for theoretical material where you need grammatical structure.
-- **bionic** — renders the whole document with the first ~40% of each word bolded so the eye fixates faster. Self-paced scrolling.
 - **page** — Edge-PDF-style paginated view with side-by-side columns, zoomable, horizontal scroll, configurable column count.
 
 ## Versions
@@ -26,7 +25,7 @@ Live: **https://salcustium.github.io/reader/**
 - **Themes**: dark / light / sepia / night / custom (with bg / fg / accent color pickers).
 - **Phantom words** (toggle): faded prev/next word above and below the current word in word mode.
 - **Hold to read** (toggle): press-and-hold the stage to play, release to pause. Coexists with horizontal scrub.
-- **Heading jump**: `[` and `]` (or buttons in mobile settings) skip to prev / next heading in sentence / bionic / page modes.
+- **Heading jump**: `[` and `]` (or buttons in mobile settings) skip to prev / next heading in sentence and page modes.
 - **Status cycle**: tap the status text to cycle progress / percent / time-left / words-left.
 - **Resume position**: each file remembers your last position, mode, and total length.
 
