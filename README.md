@@ -1,4 +1,4 @@
-# rsvp-reader
+# reader
 
 A single-file, local-first reading tool for `.md` files. Three modes:
 
