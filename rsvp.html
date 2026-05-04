@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSVP Reader</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #111;
+    --fg: #eee;
+    --dim: #888;
+    --accent: #ff5252;
+    --panel: #1a1a1a;
+    --border: #2a2a2a;
+    --link: #6cb6ff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  body {
+    display: flex; flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  header label { font-size: 13px; color: var(--dim); }
+  header input[type=number] {
+    width: 70px; padding: 4px 6px;
+    background: var(--panel); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px;
+  }
+  header button, header .file-label {
+    padding: 5px 12px;
+    background: var(--panel); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 4px;
+    cursor: pointer; font: inherit; font-size: 13px;
+  }
+  header button:hover, header .file-label:hover { background: #222; }
+  header input[type=file] { display: none; }
+  header .spacer { flex: 1; }
+  header .status { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+  .modes { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .modes button {
+    border: none; border-radius: 0;
+    border-right: 1px solid var(--border);
+    padding: 5px 10px;
+  }
+  .modes button:last-child { border-right: none; }
+  .modes button.active { background: var(--accent); color: #111; }
+
+  main {
+    flex: 1; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  main.dropping::after {
+    content: "drop markdown file";
+    position: absolute; inset: 12px;
+    border: 2px dashed var(--dim); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--dim); font-size: 18px;
+    pointer-events: none;
+    background: rgba(0,0,0,0.4);
+  }
+
+  /* word/sentence stage */
+  .stage {
+    position: relative;
+    width: min(900px, 92vw);
+    height: 70vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage[hidden] { display: none; }
+  .guides {
+    position: absolute; left: 0; right: 0;
+    height: 1px; background: var(--border);
+  }
+  .guides.top { top: calc(50% - 48px); }
+  .guides.bot { top: calc(50% + 48px); }
+  .ticks {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: 1px; background: var(--border);
+  }
+  .ticks.top { top: calc(50% - 48px); height: 8px; }
+  .ticks.bot { top: calc(50% + 40px); height: 8px; }
+
+  .word {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: clamp(36px, 7vw, 64px);
+    letter-spacing: 0.01em;
+    white-space: pre;
+    display: inline-flex;
+    will-change: transform;
+  }
+  .word .pre, .word .post { color: var(--fg); }
+  .word .orp { color: var(--accent); }
+  .word.idle { color: var(--dim); font-family: inherit; font-size: 18px; }
+
+  /* sentence mode */
+  .sentence-stage {
+    width: min(900px, 92vw);
+    text-align: center;
+  }
+  .sentence-stage .sentence {
+    font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    font-size: clamp(22px, 3.4vw, 34px);
+    line-height: 1.45;
+    color: var(--fg);
+    max-width: 100%;
+  }
+  .sentence-stage .sentence.idle { color: var(--dim); font-size: 18px; }
+  .sentence-stage .sentence.heading,
+  .sentence-stage .sentence.list-item,
+  .sentence-stage .sentence.quote,
+  .sentence-stage .sentence.code,
+  .sentence-stage .sentence.table { font-size: clamp(18px, 2.6vw, 24px); text-align: left; line-height: 1.5; }
+  .sentence-stage .sentence > * { margin: 0; }
+  .sentence-stage .sentence h1, .sentence-stage .sentence h2, .sentence-stage .sentence h3,
+  .sentence-stage .sentence h4, .sentence-stage .sentence h5, .sentence-stage .sentence h6 {
+    font-weight: 600; line-height: 1.25; color: var(--fg);
+  }
+  .sentence-stage .sentence h1 { font-size: 1.6em; }
+  .sentence-stage .sentence h2 { font-size: 1.4em; }
+  .sentence-stage .sentence h3 { font-size: 1.2em; }
+  .sentence-stage .sentence strong { color: var(--fg); font-weight: 700; }
+  .sentence-stage .sentence em { font-style: italic; }
+  .sentence-stage .sentence code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--panel); padding: 1px 6px; border-radius: 3px; font-size: 0.9em;
+  }
+  .sentence-stage .sentence pre {
+    background: var(--panel); padding: 12px 14px; border-radius: 6px;
+    overflow: auto; border: 1px solid var(--border);
+    text-align: left; font-size: 0.85em; line-height: 1.5;
+  }
+  .sentence-stage .sentence pre code { background: none; padding: 0; }
+  .sentence-stage .sentence blockquote {
+    border-left: 3px solid var(--accent); padding-left: 14px; color: var(--fg);
+  }
+  .sentence-stage .sentence a { color: var(--link); }
+  .sentence-stage .sentence mark { background: rgba(255,230,100,0.25); color: var(--fg); padding: 0 3px; border-radius: 2px; }
+  .sentence-stage .sentence del { color: var(--dim); }
+  .sentence-stage .sentence ul, .sentence-stage .sentence ol { padding-left: 1.4em; text-align: left; }
+  .sentence-stage .sentence table {
+    border-collapse: collapse; margin: 0 auto; font-size: 0.85em;
+  }
+  .sentence-stage .sentence th, .sentence-stage .sentence td {
+    border: 1px solid var(--border); padding: 6px 10px; text-align: left;
+  }
+  .sentence-stage .sentence th { background: var(--panel); font-weight: 600; }
+  .sentence-stage .sentence .bullet { color: var(--accent); margin-right: 6px; }
+  .sentence-stage .sentence .wikilink { color: var(--link); border-bottom: 1px dotted var(--link); }
+  .sentence-stage .sentence .embed { color: var(--dim); font-style: italic; }
+  .sentence-stage .meta { font-size: 12px; color: var(--dim); margin-top: 18px; }
+
+  .progress {
+    position: absolute; left: 0; bottom: 0; height: 2px;
+    background: var(--accent); width: 0;
+    transition: width 80ms linear;
+  }
+
+  /* bionic mode */
+  .bionic {
+    position: absolute; inset: 0;
+    overflow: auto;
+    padding: 28px clamp(20px, 6vw, 80px) 80px;
+  }
+  .bionic[hidden] { display: none; }
+  .bionic .doc {
+    max-width: 760px; margin: 0 auto;
+    font-size: 18px; line-height: 1.7;
+    color: #b8b8b8;
+    font-weight: 300;
+  }
+  .bionic .doc b { font-weight: 700; color: var(--fg); }
+  .bionic .doc h1, .bionic .doc h2, .bionic .doc h3, .bionic .doc h4, .bionic .doc h5, .bionic .doc h6 {
+    color: var(--fg); margin: 1.6em 0 0.5em; line-height: 1.25;
+  }
+  .bionic .doc h1 { font-size: 1.9em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  .bionic .doc h2 { font-size: 1.5em; }
+  .bionic .doc h3 { font-size: 1.25em; }
+  .bionic .doc h4 { font-size: 1.1em; color: var(--dim); }
+  .bionic .doc p { margin: 0.7em 0; }
+  .bionic .doc ul, .bionic .doc ol { padding-left: 1.4em; margin: 0.5em 0; }
+  .bionic .doc li { margin: 0.25em 0; }
+  .bionic .doc code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--panel); padding: 1px 5px; border-radius: 3px; font-size: 0.92em;
+  }
+  .bionic .doc pre {
+    background: var(--panel); padding: 12px 14px; border-radius: 6px;
+    overflow: auto; border: 1px solid var(--border);
+  }
+  .bionic .doc pre code { background: none; padding: 0; }
+  .bionic .doc a { color: var(--link); text-decoration: none; }
+  .bionic .doc a:hover { text-decoration: underline; }
+  .bionic .doc blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 12px; margin: 0.7em 0; color: var(--dim);
+  }
+  .bionic .doc hr { border: none; border-top: 1px solid var(--border); margin: 1.6em 0; }
+  .bionic .doc table {
+    border-collapse: collapse; margin: 1em 0;
+    width: 100%; font-size: 0.95em;
+  }
+  .bionic .doc th, .bionic .doc td {
+    border: 1px solid var(--border);
+    padding: 8px 12px; text-align: left; vertical-align: top;
+  }
+  .bionic .doc th { background: var(--panel); font-weight: 600; color: var(--fg); }
+  .bionic .doc tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .bionic .empty { color: var(--dim); text-align: center; padding-top: 30vh; font-size: 16px; }
+
+  footer {
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--dim);
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  kbd {
+    font-family: ui-monospace, monospace; font-size: 10px;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <label class="file-label">
+    open .md
+    <input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain">
+  </label>
+  <div class="modes" id="modes">
+    <button data-mode="word" class="active">word</button>
+    <button data-mode="sentence">sentence</button>
+    <button data-mode="bionic">bionic</button>
+  </div>
+  <button id="playBtn">play</button>
+  <button id="restartBtn">restart</button>
+  <label>wpm <input type="number" id="wpm" value="350" min="50" max="1200" step="10"></label>
+  <label><input type="checkbox" id="punctPause" checked> pauses</label>
+  <div class="spacer"></div>
+  <div class="status" id="status">no file loaded</div>
+</header>
+
+<main id="main">
+  <div class="stage" id="stageWord">
+    <div class="guides top"></div>
+    <div class="guides bot"></div>
+    <div class="ticks top"></div>
+    <div class="ticks bot"></div>
+    <div class="word idle" id="word">drop a .md file here, or use "open .md"</div>
+    <div class="progress" id="progressW"></div>
+  </div>
+
+  <div class="stage sentence-stage" id="stageSentence" hidden>
+    <div class="sentence idle" id="sentence">drop a .md file here, or use "open .md"</div>
+    <div class="meta" id="sentenceMeta"></div>
+    <div class="progress" id="progressS"></div>
+  </div>
+
+  <div class="bionic" id="stageBionic" hidden>
+    <div class="empty" id="bionicEmpty">drop a .md file here, or use "open .md"</div>
+    <div class="doc" id="bionicDoc"></div>
+  </div>
+</main>
+
+<footer>
+  <span><kbd>space</kbd> play/pause</span>
+  <span><kbd>←</kbd> / <kbd>→</kbd> back/forward</span>
+  <span><kbd>shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd> jump 20</span>
+  <span><kbd>↑</kbd> / <kbd>↓</kbd> wpm ±25</span>
+  <span><kbd>r</kbd> restart</span>
+  <span><kbd>0</kbd> jump to start</span>
+  <span><kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> mode</span>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const wordEl = $('word');
+  const sentenceEl = $('sentence');
+  const sentenceMetaEl = $('sentenceMeta');
+  const bionicDoc = $('bionicDoc');
+  const bionicEmpty = $('bionicEmpty');
+  const stageWord = $('stageWord');
+  const stageSentence = $('stageSentence');
+  const stageBionic = $('stageBionic');
+  const statusEl = $('status');
+  const wpmEl = $('wpm');
+  const playBtn = $('playBtn');
+  const restartBtn = $('restartBtn');
+  const punctPauseEl = $('punctPause');
+  const progressW = $('progressW');
+  const progressS = $('progressS');
+  const main = $('main');
+  const fileInput = $('file');
+  const modesEl = $('modes');
+
+  let rawMd = '';
+  let mode = 'word';            // 'word' | 'sentence' | 'bionic'
+  let units = [];               // words or sentences
+  let idx = 0;
+  let playing = false;
+  let timer = null;
+  let fileName = '';
+
+  const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  // ---------- markdown stripping (for word/sentence modes) ----------
+  function stripMarkdown(md, keepNewlines = false) {
+    let s = md;
+    s = s.replace(/```[\s\S]*?```/g, ' ');
+    s = s.replace(/`[^`]*`/g, ' ');
+    s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
+    s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+    s = s.replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1');
+    s = s.replace(/^[ \t]*#{1,6}[ \t]*/gm, '');
+    s = s.replace(/^[ \t]*>[ \t]?/gm, '');
+    s = s.replace(/^[ \t]*[-*+][ \t]+/gm, '');
+    s = s.replace(/^[ \t]*\d+\.[ \t]+/gm, '');
+    s = s.replace(/^[ \t]*([-*_])[ \t]*\1[ \t]*\1[\s\S]*?$/gm, ' ');
+    s = s.replace(/(\*\*|__)(.*?)\1/g, '$2');
+    s = s.replace(/(\*|_)(.*?)\1/g, '$2');
+    s = s.replace(/~~(.*?)~~/g, '$1');
+    s = s.replace(/<[^>]+>/g, ' ');
+    if (!keepNewlines) s = s.replace(/\s+/g, ' ');
+    return s.trim();
+  }
+
+  function tokenizeWords(text) {
+    const raw = text.split(/\s+/).filter(Boolean);
+    const out = [];
+    for (const w of raw) {
+      if (w.length <= 13) { out.push(w); continue; }
+      let i = 0;
+      while (i < w.length) {
+        const chunk = w.slice(i, i + 12);
+        out.push(i + 12 < w.length ? chunk + '-' : chunk);
+        i += 12;
+      }
+    }
+    return out;
+  }
+
+  function splitSentences(text) {
+    const lines = text.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    const out = [];
+    for (const l of lines) {
+      const parts = l.split(/(?<=[.!?])\s+(?=[A-Z(\["'])/);
+      for (const p of parts) {
+        const t = p.trim();
+        if (t) out.push(t);
+      }
+    }
+    return out;
+  }
+
+  const countWords = s => (s || '').split(/\s+/).filter(Boolean).length;
+
+  // Obsidian preprocessing applied to raw markdown before marked sees it
+  function preprocessObsidian(md) {
+    // Embeds ![[file|alt]]
+    md = md.replace(/!\[\[([^\]]+?)\]\]/g, (_, c) => {
+      const [name, alt] = c.split('|');
+      return `<span class="embed">↪ ${alt || name}</span>`;
+    });
+    // Wikilinks [[Page|alt]]
+    md = md.replace(/\[\[([^\]]+?)\]\]/g, (_, c) => {
+      const [name, alt] = c.split('|');
+      return `<span class="wikilink">${alt || name}</span>`;
+    });
+    // Highlights ==text==
+    md = md.replace(/==([^=\n]+?)==/g, '<mark>$1</mark>');
+    return md;
+  }
+
+  // Sentence-mode units: each element is a "card" with rendered HTML.
+  // Block-level things like tables and code blocks are kept whole.
+  function buildSentenceUnits(md) {
+    if (typeof marked === 'undefined') {
+      // Fallback if CDN failed: degrade to plain sentences
+      return splitSentences(stripMarkdown(md, true)).map(s => ({
+        html: esc(s), words: countWords(s), type: 'sentence'
+      }));
+    }
+    const tokens = marked.lexer(preprocessObsidian(md));
+    const cards = [];
+
+    const splitInto = text => {
+      const parts = text.split(/(?<=[.!?])\s+(?=[A-Z(\["'])/);
+      return parts.map(p => p.trim()).filter(Boolean);
+    };
+
+    function walk(toks) {
+      for (const t of toks) {
+        switch (t.type) {
+          case 'heading':
+            cards.push({
+              html: `<h${t.depth}>${marked.parseInline(t.text)}</h${t.depth}>`,
+              words: countWords(t.text),
+              type: 'heading'
+            });
+            break;
+          case 'paragraph': {
+            for (const s of splitInto(t.text)) {
+              cards.push({ html: marked.parseInline(s), words: countWords(s), type: 'sentence' });
+            }
+            break;
+          }
+          case 'list': {
+            for (let i = 0; i < t.items.length; i++) {
+              const item = t.items[i];
+              const txt = item.text || '';
+              const marker = t.ordered
+                ? `<span class="bullet">${(t.start || 1) + i}.</span> `
+                : `<span class="bullet">•</span> `;
+              cards.push({
+                html: `${marker}${marked.parseInline(txt)}`,
+                words: countWords(txt),
+                type: 'list-item'
+              });
+            }
+            break;
+          }
+          case 'table': {
+            const rowWords = (t.header || []).reduce((a, c) => a + countWords(c.text || ''), 0)
+              + (t.rows || []).reduce((a, r) => a + r.reduce((b, c) => b + countWords(c.text || ''), 0), 0);
+            cards.push({
+              html: marked.parser([t]),
+              words: Math.max(20, rowWords),
+              type: 'table'
+            });
+            break;
+          }
+          case 'code':
+            cards.push({
+              html: marked.parser([t]),
+              words: Math.max(8, countWords(t.text)),
+              type: 'code'
+            });
+            break;
+          case 'blockquote':
+            cards.push({
+              html: marked.parser([t]),
+              words: Math.max(3, countWords(t.text || '')),
+              type: 'quote'
+            });
+            break;
+          case 'hr':
+          case 'space':
+            break;
+          default:
+            if (t.text) {
+              cards.push({
+                html: marked.parseInline(t.text),
+                words: countWords(t.text),
+                type: 'sentence'
+              });
+            }
+        }
+      }
+    }
+    walk(tokens);
+    return cards;
+  }
+
+  // ---------- minimal markdown -> html (for bionic mode) ----------
+  function inlineMd(s) {
+    s = esc(s);
+    // inline code first so we don't process its contents
+    s = s.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+    s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2">');
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+    s = s.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+    s = s.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+    return s;
+  }
+
+  function splitTableRow(line) {
+    let s = line.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|')) s = s.slice(0, -1);
+    // split on | not preceded by backslash
+    return s.split(/(?<!\\)\|/).map(c => c.replace(/\\\|/g, '|').trim());
+  }
+
+  function isTableSep(line) {
+    if (!/\|/.test(line)) return false;
+    const cells = splitTableRow(line);
+    if (!cells.length) return false;
+    return cells.every(c => /^:?-{3,}:?$/.test(c));
+  }
+
+  function renderMarkdown(md) {
+    const lines = md.split('\n');
+    let html = '';
+    let inCode = false;
+    let inList = false;
+    let inOl = false;
+    let para = [];
+
+    const flushPara = () => {
+      if (para.length) {
+        html += `<p>${inlineMd(para.join(' '))}</p>`;
+        para = [];
+      }
+    };
+    const closeLists = () => {
+      if (inList) { html += '</ul>'; inList = false; }
+      if (inOl)   { html += '</ol>'; inOl   = false; }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (/^```/.test(line)) {
+        flushPara(); closeLists();
+        if (!inCode) { html += '<pre><code>'; inCode = true; }
+        else         { html += '</code></pre>'; inCode = false; }
+        continue;
+      }
+      if (inCode) { html += esc(line) + '\n'; continue; }
+
+      if (/^\s*$/.test(line)) { flushPara(); closeLists(); continue; }
+
+      // table: header | sep | rows...
+      if (/\|/.test(line) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+        flushPara(); closeLists();
+        const headers = splitTableRow(line);
+        i += 2; // skip header + separator
+        const rows = [];
+        while (i < lines.length && /\|/.test(lines[i]) && !/^\s*$/.test(lines[i])) {
+          rows.push(splitTableRow(lines[i]));
+          i++;
+        }
+        i--; // step back so outer loop's i++ lands on the next unread line
+        html += '<table><thead><tr>';
+        for (const h of headers) html += `<th>${inlineMd(h)}</th>`;
+        html += '</tr></thead><tbody>';
+        for (const r of rows) {
+          html += '<tr>';
+          for (let c = 0; c < headers.length; c++) {
+            html += `<td>${inlineMd(r[c] || '')}</td>`;
+          }
+          html += '</tr>';
+        }
+        html += '</tbody></table>';
+        continue;
+      }
+
+      const h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h) {
+        flushPara(); closeLists();
+        const level = h[1].length;
+        html += `<h${level}>${inlineMd(h[2])}</h${level}>`;
+        continue;
+      }
+
+      if (/^\s*[-*_]{3,}\s*$/.test(line)) {
+        flushPara(); closeLists();
+        html += '<hr>';
+        continue;
+      }
+
+      const bq = line.match(/^\s*>\s?(.*)$/);
+      if (bq) {
+        flushPara(); closeLists();
+        html += `<blockquote>${inlineMd(bq[1])}</blockquote>`;
+        continue;
+      }
+
+      const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+      if (ul) {
+        flushPara();
+        if (inOl) { html += '</ol>'; inOl = false; }
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${inlineMd(ul[1])}</li>`;
+        continue;
+      }
+      const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+      if (ol) {
+        flushPara();
+        if (inList) { html += '</ul>'; inList = false; }
+        if (!inOl) { html += '<ol>'; inOl = true; }
+        html += `<li>${inlineMd(ol[1])}</li>`;
+        continue;
+      }
+
+      para.push(line);
+    }
+    flushPara(); closeLists();
+    if (inCode) html += '</code></pre>';
+    return html;
+  }
+
+  // walk text nodes, bold first ~40% of each word; skip code/pre
+  function bionicify(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        let p = n.parentNode;
+        while (p && p !== root) {
+          const tag = p.tagName;
+          if (tag === 'CODE' || tag === 'PRE') return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    for (const node of nodes) {
+      const frag = document.createDocumentFragment();
+      const parts = node.nodeValue.split(/(\s+)/);
+      for (const p of parts) {
+        if (!p) continue;
+        if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); continue; }
+        // skip leading non-letter chars when picking bold portion
+        const leadMatch = p.match(/^[^\p{L}\p{N}]+/u);
+        const lead = leadMatch ? leadMatch[0] : '';
+        const core = p.slice(lead.length);
+        if (!core) { frag.appendChild(document.createTextNode(p)); continue; }
+        const k = Math.max(1, Math.ceil(core.length * 0.4));
+        if (lead) frag.appendChild(document.createTextNode(lead));
+        const b = document.createElement('b');
+        b.textContent = core.slice(0, k);
+        frag.appendChild(b);
+        if (core.length > k) frag.appendChild(document.createTextNode(core.slice(k)));
+      }
+      node.parentNode.replaceChild(frag, node);
+    }
+  }
+
+  // ---------- ORP ----------
+  function pivotIndex(w) {
+    const n = w.length;
+    if (n <= 1) return 0;
+    if (n <= 5) return 1;
+    if (n <= 9) return 2;
+    if (n <= 13) return 3;
+    return 4;
+  }
+
+  function renderWord(w) {
+    if (!w) { wordEl.className = 'word idle'; wordEl.textContent = ''; wordEl.style.transform = ''; return; }
+    const p = pivotIndex(w);
+    const pre = w.slice(0, p);
+    const orp = w.slice(p, p + 1);
+    const post = w.slice(p + 1);
+    wordEl.className = 'word';
+    wordEl.innerHTML =
+      `<span class="pre">${esc(pre)}</span>` +
+      `<span class="orp">${esc(orp)}</span>` +
+      `<span class="post">${esc(post)}</span>`;
+    requestAnimationFrame(() => {
+      const orpEl = wordEl.querySelector('.orp');
+      if (!orpEl) return;
+      const wb = wordEl.getBoundingClientRect();
+      const ob = orpEl.getBoundingClientRect();
+      const dx = (wb.left + wb.width / 2) - (ob.left + ob.width / 2);
+      wordEl.style.transform = `translateX(${dx}px)`;
+    });
+  }
+
+  function renderSentence(u) {
+    if (!u) { sentenceEl.className = 'sentence idle'; sentenceEl.textContent = ''; sentenceMetaEl.textContent = ''; return; }
+    sentenceEl.className = 'sentence ' + (u.type || 'sentence');
+    sentenceEl.innerHTML = u.html;
+    const tag = (u.type && u.type !== 'sentence') ? ` · ${u.type}` : '';
+    sentenceMetaEl.textContent = `${u.words} words${tag}`;
+  }
+
+  // ---------- timing ----------
+  function getWpm() { return Math.max(50, Math.min(1200, +wpmEl.value || 350)); }
+
+  function delayForWord(w) {
+    const wpm = getWpm();
+    const base = 60000 / wpm;
+    let d = base;
+    if (w.length > 8) d *= 1.15;
+    if (w.length > 11) d *= 1.15;
+    if (punctPauseEl.checked) {
+      const last = w[w.length - 1];
+      if (',;:'.includes(last)) d *= 1.6;
+      else if ('.!?'.includes(last)) d *= 2.2;
+      else if (')]}"'.includes(last)) d *= 1.4;
+    }
+    return d;
+  }
+
+  function delayForSentence(u) {
+    const wpm = getWpm();
+    const wc = u.words || 1;
+    let d = (60000 / wpm) * wc;
+    d += 250 + Math.min(900, wc * 25);
+    if (u.type === 'table' || u.type === 'code') d *= 1.4;
+    else if (u.type === 'heading') d *= 0.8;
+    return d;
+  }
+
+  // ---------- playback ----------
+  function step() {
+    if (!playing) return;
+    if (idx >= units.length) { pause(); return; }
+    const u = units[idx];
+    if (mode === 'word') renderWord(u);
+    else if (mode === 'sentence') renderSentence(u);
+    updateStatus();
+    const d = mode === 'word' ? delayForWord(u) : delayForSentence(u);
+    const bar = mode === 'word' ? progressW : progressS;
+    bar.style.transition = `width ${d}ms linear`;
+    bar.style.width = `${((idx + 1) / units.length) * 100}%`;
+    idx++;
+    timer = setTimeout(step, d);
+  }
+
+  function play() {
+    if (mode === 'bionic') return;
+    if (!units.length) return;
+    if (idx >= units.length) idx = 0;
+    playing = true;
+    playBtn.textContent = 'pause';
+    step();
+  }
+  function pause() {
+    playing = false;
+    playBtn.textContent = 'play';
+    if (timer) { clearTimeout(timer); timer = null; }
+  }
+  function toggle() { playing ? pause() : play(); }
+
+  function jump(delta) {
+    if (mode === 'bionic') return;
+    pause();
+    idx = Math.max(0, Math.min(units.length, idx + delta));
+    const shown = units[Math.max(0, idx - 1)];
+    if (mode === 'word') renderWord(shown || '');
+    else renderSentence(shown);
+    const bar = mode === 'word' ? progressW : progressS;
+    bar.style.transition = 'none';
+    bar.style.width = `${(idx / Math.max(1, units.length)) * 100}%`;
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const wpm = getWpm();
+    if (!rawMd) { statusEl.textContent = 'no file loaded'; return; }
+    if (mode === 'bionic') {
+      statusEl.textContent = `${fileName} · bionic`;
+      return;
+    }
+    const remaining = Math.max(0, units.length - idx);
+    let est;
+    if (mode === 'word') {
+      est = remaining / wpm;
+    } else {
+      const wordsLeft = units.slice(idx).reduce((a, u) => a + (u.words || 0), 0);
+      est = wordsLeft / wpm;
+    }
+    statusEl.textContent =
+      `${idx}/${units.length} ${mode === 'word' ? 'words' : 'sentences'} · ${Math.round(est)}m left @ ${wpm} wpm`;
+  }
+
+  // ---------- mode switching ----------
+  function setMode(m) {
+    if (m === mode) return;
+    pause();
+    mode = m;
+    for (const b of modesEl.querySelectorAll('button')) {
+      b.classList.toggle('active', b.dataset.mode === m);
+    }
+    stageWord.hidden = m !== 'word';
+    stageSentence.hidden = m !== 'sentence';
+    stageBionic.hidden = m !== 'bionic';
+    if (rawMd) buildForMode();
+    else updateStatus();
+  }
+
+  function buildForMode() {
+    idx = 0;
+    if (mode === 'word') {
+      units = tokenizeWords(stripMarkdown(rawMd));
+      progressW.style.transition = 'none'; progressW.style.width = '0%';
+      renderWord(units[0] || '');
+    } else if (mode === 'sentence') {
+      units = buildSentenceUnits(rawMd);
+      progressS.style.transition = 'none'; progressS.style.width = '0%';
+      renderSentence(units[0]);
+    } else if (mode === 'bionic') {
+      units = [];
+      bionicDoc.innerHTML = renderMarkdown(rawMd);
+      bionicify(bionicDoc);
+      bionicEmpty.style.display = bionicDoc.textContent.trim() ? 'none' : '';
+      stageBionic.scrollTop = 0;
+    }
+    updateStatus();
+  }
+
+  // ---------- file loading ----------
+  async function loadFile(file) {
+    rawMd = await file.text();
+    fileName = file.name;
+    buildForMode();
+    if (mode !== 'bionic') {
+      statusEl.textContent = `${fileName} · ${units.length} ${mode === 'word' ? 'words' : 'sentences'} loaded`;
+    } else {
+      statusEl.textContent = `${fileName} · bionic`;
+    }
+  }
+
+  fileInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) loadFile(f);
+  });
+
+  // drag-and-drop on whole window
+  ['dragenter', 'dragover'].forEach(ev =>
+    window.addEventListener(ev, e => {
+      if (!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+      e.preventDefault();
+      main.classList.add('dropping');
+    }));
+  ['dragleave', 'drop'].forEach(ev =>
+    window.addEventListener(ev, e => {
+      e.preventDefault();
+      if (ev === 'dragleave' && e.relatedTarget) return;
+      main.classList.remove('dropping');
+    }));
+  window.addEventListener('drop', e => {
+    if (!e.dataTransfer.files.length) return;
+    e.preventDefault();
+    loadFile(e.dataTransfer.files[0]);
+  });
+
+  // controls
+  playBtn.addEventListener('click', toggle);
+  restartBtn.addEventListener('click', () => { idx = 0; if (mode !== 'bionic') play(); });
+  wpmEl.addEventListener('change', updateStatus);
+  modesEl.addEventListener('click', e => {
+    const b = e.target.closest('button[data-mode]');
+    if (b) setMode(b.dataset.mode);
+  });
+
+  // keyboard
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    switch (e.key) {
+      case ' ': e.preventDefault(); toggle(); break;
+      case 'ArrowLeft': e.preventDefault(); jump(e.shiftKey ? -20 : -1); break;
+      case 'ArrowRight': e.preventDefault(); jump(e.shiftKey ? 20 : 1); break;
+      case 'ArrowUp': e.preventDefault(); wpmEl.value = Math.min(1200, getWpm() + 25); updateStatus(); break;
+      case 'ArrowDown': e.preventDefault(); wpmEl.value = Math.max(50, getWpm() - 25); updateStatus(); break;
+      case 'r': case 'R': idx = 0; if (mode !== 'bionic') play(); break;
+      case '0': jump(-units.length); break;
+      case '1': setMode('word'); break;
+      case '2': setMode('sentence'); break;
+      case '3': setMode('bionic'); break;
+    }
+  });
+})();
+</script>
+</body>
+</html>
