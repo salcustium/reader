@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
   <rect width="192" height="192" rx="40" fill="#111111"/>
-  <line x1="96" y1="36" x2="96" y2="62" stroke="#2a2a2a" stroke-width="2"/>
-  <line x1="96" y1="130" x2="96" y2="156" stroke="#2a2a2a" stroke-width="2"/>
-  <text x="96" y="96" font-family="-apple-system,system-ui,sans-serif" font-size="110" font-weight="800"
-        text-anchor="middle" dominant-baseline="central" fill="#eeeeee">r<tspan fill="#ff5252">e</tspan></text>
+  <text x="96" y="148" font-family="-apple-system,BlinkMacSystemFont,system-ui,sans-serif"
+        font-size="150" font-weight="800" text-anchor="middle" fill="#ff5252">r</text>
+  <circle cx="78" cy="48" r="9" fill="#ffffff"/>
+  <circle cx="114" cy="48" r="9" fill="#ffffff"/>
 </svg>

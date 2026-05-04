@@ -1,4 +1,4 @@
-const CACHE = 'reader-mobile-v3';
+const CACHE = 'reader-mobile-v4';
 const ASSETS = [
   './',
   './index.html',
