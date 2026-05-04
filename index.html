@@ -14,12 +14,12 @@
   // Auto-route: phones go to mobile, everything else to desktop
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 900);
-  location.replace(isMobile ? './mobile/' : './rsvp.html');
+  location.replace(isMobile ? './mobile/' : './read.html');
 </script>
 </head>
 <body>
   <noscript>
-    <a href="./rsvp.html">desktop</a>
+    <a href="./read.html">desktop</a>
     <a href="./mobile/">mobile</a>
   </noscript>
 </body>

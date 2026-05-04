@@ -16,7 +16,7 @@ Live: **https://salcustium.github.io/reader/**
 | Path | For |
 |---|---|
 | `/` | auto-routes based on device |
-| `/rsvp.html` | desktop |
+| `/read.html` | desktop |
 | `/mobile/` | mobile + installable PWA (offline) |
 
 ## Markdown features

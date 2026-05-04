@@ -561,29 +561,51 @@ if ('serviceWorker' in navigator) {
   els.zoomOut.addEventListener('click', () => setZoom(S.zoom - 0.1));
 
   // ---- touch gestures on the flash stages ----
-  let touch = null;
+  // tap = play/pause, horizontal drag = continuous scrub (fine near zero, accelerated when far)
   function attachGestures(el) {
+    let g = null;
+    function applyScrubIdx(newIdx) {
+      if (newIdx === S.idx) return;
+      S.idx = newIdx;
+      const shown = S.units[Math.max(0, newIdx - 1)];
+      if (S.mode === 'word') renderWord(shown || '');
+      else renderSentence(shown);
+      const bar = S.mode === 'word' ? $('progressW') : $('progressS');
+      bar.style.transition = 'none';
+      bar.style.width = `${(newIdx / Math.max(1, S.units.length)) * 100}%`;
+      updateStatus();
+    }
     el.addEventListener('touchstart', e => {
-      if (e.touches.length !== 1) { touch = null; return; }
+      if (e.touches.length !== 1) { g = null; return; }
       const t = e.touches[0];
-      touch = { x: t.clientX, y: t.clientY, t: Date.now(), moved: false };
+      g = { x: t.clientX, y: t.clientY, t: Date.now(),
+            startIdx: S.idx, scrubbing: false, axis: null };
     }, { passive: true });
     el.addEventListener('touchmove', e => {
-      if (!touch || e.touches.length !== 1) return;
+      if (!g || e.touches.length !== 1) return;
       const t = e.touches[0];
-      const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
-      if (Math.hypot(dx, dy) > 12) touch.moved = true;
-    }, { passive: true });
-    el.addEventListener('touchend', e => {
-      if (!touch) return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
-      const dt = Date.now() - touch.t;
-      if (!touch.moved && dt < 350) { toggle(); }
-      else if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
-        jump(dx < 0 ? (e.changedTouches[0].clientX < window.innerWidth / 2 ? 1 : 1) : -1);
+      const dx = t.clientX - g.x, dy = t.clientY - g.y;
+      if (!g.axis && Math.hypot(dx, dy) > 12)
+        g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (g.axis === 'x' && S.units.length) {
+        if (!g.scrubbing) { g.scrubbing = true; if (S.playing) pause(); }
+        const sign = Math.sign(dx), mag = Math.abs(dx);
+        let delta;
+        if (mag < 40) {
+          delta = sign * Math.round(mag / 8);
+        } else {
+          const overflow = mag - 40;
+          const fraction = overflow / window.innerWidth;
+          delta = sign * (5 + Math.round(fraction * S.units.length * 0.7));
+        }
+        applyScrubIdx(Math.max(0, Math.min(S.units.length, g.startIdx + delta)));
       }
-      touch = null;
+    }, { passive: true });
+    el.addEventListener('touchend', () => {
+      if (!g) return;
+      const dt = Date.now() - g.t;
+      if (!g.axis && dt < 350) toggle();
+      g = null;
     });
   }
   attachGestures(els.stageWord);
